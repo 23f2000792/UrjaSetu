@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import type { UserProfile } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrendingUp, Leaf } from "lucide-react";
 
 interface LeaderboardProps {
     topTraders: UserProfile[];
@@ -31,6 +32,15 @@ export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardP
                 </TableRow>
             ))
         }
+        if (users.length === 0) {
+            return (
+                <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                        No data available yet.
+                    </TableCell>
+                </TableRow>
+            );
+        }
         return users.map((user, index) => (
              <TableRow key={user.id}>
                 <TableCell className="font-bold text-lg">{index + 1}</TableCell>
@@ -43,7 +53,11 @@ export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardP
                         <span className="font-medium">{(user as any).fullName}</span>
                     </div>
                 </TableCell>
-                <TableCell className="text-right">{(user as any)[valueKey].toLocaleString()} {unit}</TableCell>
+                <TableCell className="text-right font-medium">
+                    {valueKey === 'volume' ? 'Rs. ' : ''}
+                    {((user as any)[valueKey] || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {valueKey === 'volume' ? '' : ` ${unit}`}
+                </TableCell>
             </TableRow>
         ))
     }
@@ -52,8 +66,8 @@ export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardP
   return (
     <Tabs defaultValue="traders" className="w-full">
       <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-        <TabsTrigger value="traders">Top Traders</TabsTrigger>
-        <TabsTrigger value="offsetters">Top Carbon Offsetters</TabsTrigger>
+        <TabsTrigger value="traders"><TrendingUp className="mr-2 h-4 w-4" /> Top Traders</TabsTrigger>
+        <TabsTrigger value="offsetters"><Leaf className="mr-2 h-4 w-4" /> Top Carbon Offsetters</TabsTrigger>
       </TabsList>
       <TabsContent value="traders">
         <Table>
@@ -61,11 +75,11 @@ export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardP
                 <TableRow>
                     <TableHead className="w-[50px]">Rank</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead className="text-right">Volume (Rs.)</TableHead>
+                    <TableHead className="text-right">Trading Volume</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {renderTableRows(topTraders, 'volume' as any, 'Rs.')}
+                {renderTableRows(topTraders, 'volume', 'Rs.')}
             </TableBody>
         </Table>
       </TabsContent>
@@ -75,16 +89,14 @@ export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardP
                 <TableRow>
                     <TableHead className="w-[50px]">Rank</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead className="text-right">Carbon Offset (kg CO₂e)</TableHead>
+                    <TableHead className="text-right">Carbon Offset</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {renderTableRows(topOffsetters, 'offset' as any, 'kg')}
+                {renderTableRows(topOffsetters, 'offset', 'kg CO₂e')}
             </TableBody>
         </Table>
       </TabsContent>
     </Tabs>
   );
 }
-
-    

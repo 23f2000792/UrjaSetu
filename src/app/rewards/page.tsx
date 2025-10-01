@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Star, Trophy } from "lucide-react";
 import { UserBadges } from "@/components/rewards/user-badges";
 import { Leaderboard } from "@/components/rewards/leaderboard";
-import { collection, onSnapshot, query, limit, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, limit, orderBy, getDocs, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useState, useEffect } from 'react';
-import type { UserProfile } from "@/lib/mock-data";
+import type { UserProfile, Transaction } from "@/lib/mock-data";
 
 
 export default function RewardsPage() {
@@ -17,35 +17,60 @@ export default function RewardsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real-world scenario, this data would be aggregated in a separate collection
-    // via Firebase Functions for performance. For this demo, we query the users directly
-    // and sort them. This is not scalable for a large number of users.
-    
-    // Fetch top traders (mocked logic, as we don't have a volume field)
-    const tradersQuery = query(collection(db, "users"), limit(5));
-    const unsubTraders = onSnapshot(tradersQuery, (snapshot) => {
-      const users: UserProfile[] = [];
-      snapshot.forEach(doc => {
-        users.push({ ...doc.data(), id: doc.id, volume: Math.random() * 100000 } as UserProfile & { volume: number });
-      });
-      setTopTraders(users.sort((a: any, b: any) => b.volume - a.volume));
-    });
+    const fetchLeaderboardData = async () => {
+      setLoading(true);
 
-    // Fetch top offsetters (mocked logic)
-     const offsettersQuery = query(collection(db, "users"), limit(5));
-    const unsubOffsetters = onSnapshot(offsettersQuery, (snapshot) => {
-      const users: UserProfile[] = [];
-      snapshot.forEach(doc => {
-        users.push({ ...doc.data(), id: doc.id, offset: Math.random() * 5000 } as UserProfile & { offset: number });
+      // 1. Fetch all users and filter for buyers
+      const usersQuery = query(collection(db, "users"), where("role", "==", "buyer"));
+      const usersSnapshot = await getDocs(usersQuery);
+      const userMap = new Map<string, UserProfile>();
+      usersSnapshot.forEach(doc => {
+        userMap.set(doc.id, { id: doc.id, ...doc.data() } as UserProfile);
       });
-      setTopOffsetters(users.sort((a: any, b: any) => b.offset - a.offset));
+
+      // 2. Fetch all transactions
+      const transactionsQuery = query(collection(db, "transactions"), where("type", "==", "Buy"));
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      
+      // 3. Aggregate data
+      const userStats: { [userId: string]: { volume: number; offset: number } } = {};
+
+      transactionsSnapshot.forEach(doc => {
+        const tx = doc.data() as Transaction;
+        if (!userStats[tx.userId]) {
+          userStats[tx.userId] = { volume: 0, offset: 0 };
+        }
+        userStats[tx.userId].volume += tx.totalCost;
+        // Assuming 1 token = 120 kWh, 1 kWh = 0.707 kg CO2
+        const energy = tx.quantity * 120;
+        userStats[tx.userId].offset += energy * 0.707;
+      });
+
+      // 4. Combine user data with aggregated stats
+      const combinedUsers: UserProfile[] = [];
+      for (const userId in userStats) {
+        if (userMap.has(userId)) {
+          combinedUsers.push({
+            ...userMap.get(userId)!,
+            volume: userStats[userId].volume,
+            offset: userStats[userId].offset,
+          });
+        }
+      }
+
+      // 5. Sort and set state
+      const sortedTraders = [...combinedUsers].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 5);
+      const sortedOffsetters = [...combinedUsers].sort((a, b) => (b.offset || 0) - (a.offset || 0)).slice(0, 5);
+
+      setTopTraders(sortedTraders);
+      setTopOffsetters(sortedOffsetters);
       setLoading(false);
-    });
+    };
 
-    return () => {
-      unsubTraders();
-      unsubOffsetters();
-    }
+    fetchLeaderboardData();
+
+    // Set up listeners for real-time updates if needed in the future,
+    // but for leaderboards, a periodic fetch is often sufficient.
   }, []);
 
   return (
