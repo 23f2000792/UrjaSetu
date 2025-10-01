@@ -95,6 +95,7 @@ export default function TradePage() {
                 const currentProjectData = projectDoc.data() as SolarProject;
                 const price = (asset as any).tokenPrice || (asset as any).price;
                 const available = currentProjectData.tokensAvailable;
+                const sellerId = (asset as SolarProject).ownerId;
 
                 if (quantity > available) {
                     throw "Not enough tokens available for this purchase.";
@@ -108,6 +109,7 @@ export default function TradePage() {
                 // 2. Create a new transaction record
                 const transactionData: Omit<Transaction, 'id'> = {
                     userId: user.uid,
+                    sellerId: sellerId,
                     projectId: assetId,
                     projectName: (asset as any).name || (asset as any).projectName,
                     quantity: quantity,
@@ -258,3 +260,5 @@ export default function TradePage() {
         </div>
     );
 }
+
+    

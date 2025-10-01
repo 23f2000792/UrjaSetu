@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import { PlaceHolderImages } from './placeholder-images';
 import { Timestamp } from 'firebase/firestore';
 
@@ -22,6 +17,7 @@ export type SolarProject = {
   totalTokens: number;
   tokensAvailable: number;
   price?: number; // for compatibility with EnergyCredit
+  ownerId: string;
 };
 
 export type EnergyCredit = {
@@ -101,6 +97,7 @@ export type GovernanceProposal = {
 export type Transaction = {
   id: string;
   userId: string;
+  sellerId: string;
   projectId: string;
   projectName: string;
   quantity: number;
@@ -121,3 +118,5 @@ export type UserProfile = {
   offset?: number;
   avatar?: string;
 };
+
+    

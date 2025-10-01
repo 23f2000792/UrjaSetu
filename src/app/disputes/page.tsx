@@ -4,24 +4,26 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserDisputeList, Dispute } from "@/components/disputes/user-dispute-list";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { onAuthStateChanged, User } from 'firebase/auth';
+import type { Transaction } from "@/lib/mock-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export default function DisputesPage() {
-  const [transactionId, setTransactionId] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState("");
   const [details, setDetails] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [userDisputes, setUserDisputes] = useState<Dispute[]>([]);
+  const [userTransactions, setUserTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingDisputes, setLoadingDisputes] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const { toast } = useToast();
 
    useEffect(() => {
@@ -33,26 +35,41 @@ export default function DisputesPage() {
 
   useEffect(() => {
     if (!user) {
-        setLoadingDisputes(false);
+        setLoadingData(false);
         return;
     };
     
-    setLoadingDisputes(true);
-    const q = query(collection(db, "disputes"), where("userId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    setLoadingData(true);
+
+    // Fetch user's transactions for the dropdown
+    const fetchTransactions = async () => {
+        const transQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("type", "==", "Buy"));
+        const querySnapshot = await getDocs(transQuery);
+        const transData: Transaction[] = [];
+        querySnapshot.forEach((doc) => {
+            transData.push({ id: doc.id, ...doc.data() } as Transaction);
+        });
+        setUserTransactions(transData.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds));
+    };
+
+    fetchTransactions();
+
+    // Listen for user's disputes
+    const disputesQuery = query(collection(db, "disputes"), where("userId", "==", user.uid));
+    const unsubscribeDisputes = onSnapshot(disputesQuery, (querySnapshot) => {
       const disputesData: Dispute[] = [];
       querySnapshot.forEach((doc) => {
         disputesData.push({ id: doc.id, ...doc.data() } as Dispute);
       });
       setUserDisputes(disputesData.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds));
-      setLoadingDisputes(false);
+      setLoadingData(false);
     }, (error) => {
         console.error("Error fetching user disputes:", error);
         toast({ title: "Error", description: "Could not fetch your disputes.", variant: "destructive" });
-        setLoadingDisputes(false);
+        setLoadingData(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeDisputes();
   }, [user, toast]);
 
 
@@ -62,23 +79,32 @@ export default function DisputesPage() {
         toast({ title: "Not Authenticated", description: "You must be logged in to file a dispute.", variant: "destructive" });
         return;
     }
-    if (!transactionId || !details) {
-        toast({ title: "Missing Fields", description: "Please fill out all fields.", variant: "destructive" });
+    if (!selectedTransaction || !details) {
+        toast({ title: "Missing Fields", description: "Please select a transaction and provide details.", variant: "destructive" });
         return;
     }
 
     setIsLoading(true);
     try {
+        const transaction = userTransactions.find(t => t.id === selectedTransaction);
+        if (!transaction) {
+            toast({ title: "Error", description: "Selected transaction not found.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+
         await addDoc(collection(db, "disputes"), {
             userId: user.uid,
             userEmail: user.email,
-            transactionId: transactionId,
+            transactionId: transaction.id,
+            projectId: transaction.projectId,
+            sellerId: transaction.sellerId, // Make sure sellerId is on transactions
             details: details,
             status: "New",
             createdAt: serverTimestamp(),
         });
         toast({ title: "Success", description: "Your dispute has been filed." });
-        setTransactionId("");
+        setSelectedTransaction("");
         setDetails("");
     } catch (error) {
         console.error("Error filing dispute: ", error);
@@ -104,14 +130,19 @@ export default function DisputesPage() {
             </CardHeader>
             <CardContent className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="transaction-id">Transaction ID</Label>
-                <Input 
-                    id="transaction-id" 
-                    placeholder="Enter the transaction hash or order ID" 
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    disabled={isLoading}
-                />
+                <Label htmlFor="transaction-id">Select Transaction</Label>
+                <Select onValueChange={setSelectedTransaction} value={selectedTransaction} disabled={isLoading}>
+                    <SelectTrigger id="transaction-id">
+                        <SelectValue placeholder="Select the transaction to dispute..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {userTransactions.length > 0 ? userTransactions.map(t => (
+                            <SelectItem key={t.id} value={t.id}>
+                                {t.projectName} - {t.quantity} units - {t.timestamp.toDate().toLocaleDateString()}
+                            </SelectItem>
+                        )) : <SelectItem value="none" disabled>No transactions found</SelectItem>}
+                    </SelectContent>
+                </Select>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="dispute-details">Details of the Issue</Label>
@@ -134,7 +165,9 @@ export default function DisputesPage() {
         </form>
       </Card>
       
-      <UserDisputeList disputes={userDisputes} loading={loadingDisputes} />
+      <UserDisputeList disputes={userDisputes} loading={loadingData} />
     </div>
   );
 }
+
+    

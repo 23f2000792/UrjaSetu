@@ -1,5 +1,4 @@
 
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Timestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel } from "lucide-react";
+import Link from "next/link";
 
 export interface Dispute {
   id: string;
@@ -16,6 +16,7 @@ export interface Dispute {
   details: string;
   status: 'New' | 'Under Review' | 'Resolved' | 'Closed';
   createdAt: Timestamp;
+  rating?: number;
 }
 
 interface SellerDisputeListProps {
@@ -28,11 +29,21 @@ export function SellerDisputeList({ disputes, loading }: SellerDisputeListProps)
         if (!timestamp) return 'N/A';
         return new Date(timestamp.seconds * 1000).toLocaleDateString();
     }
+    
+    const getBadgeVariant = (status: Dispute['status']) => {
+        switch (status) {
+            case 'New': return 'destructive';
+            case 'Under Review': return 'outline';
+            case 'Resolved': return 'secondary';
+            default: return 'default';
+        }
+    }
+
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Open Disputes</CardTitle>
+                <CardTitle>All Disputes</CardTitle>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -40,7 +51,7 @@ export function SellerDisputeList({ disputes, loading }: SellerDisputeListProps)
                         <TableRow>
                             <TableHead>Case ID</TableHead>
                             <TableHead>User</TableHead>
-                            <TableHead>Transaction/Order ID</TableHead>
+                            <TableHead>Transaction ID</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Date Filed</TableHead>
                             <TableHead className="text-right">Action</TableHead>
@@ -61,17 +72,19 @@ export function SellerDisputeList({ disputes, loading }: SellerDisputeListProps)
                         ) : disputes.length > 0 ? (
                             disputes.map((dispute) => (
                                 <TableRow key={dispute.id}>
-                                    <TableCell className="font-medium">{dispute.id.substring(0, 8)}...</TableCell>
+                                    <TableCell className="font-medium text-xs">{dispute.id.substring(0, 8)}...</TableCell>
                                     <TableCell>{dispute.userEmail}</TableCell>
                                     <TableCell className="text-muted-foreground font-mono text-xs">{dispute.transactionId}</TableCell>
                                     <TableCell>
-                                        <Badge variant={dispute.status === 'New' ? 'destructive' : 'outline'}>
+                                        <Badge variant={getBadgeVariant(dispute.status)}>
                                             {dispute.status}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{formatDate(dispute.createdAt)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">Review Case</Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/disputes/${dispute.id}`}>Review Case</Link>
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -80,7 +93,7 @@ export function SellerDisputeList({ disputes, loading }: SellerDisputeListProps)
                                 <TableCell colSpan={6} className="h-24 text-center">
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                         <Gavel className="h-8 w-8" />
-                                        No open disputes found.
+                                        No disputes found for your projects.
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -91,3 +104,5 @@ export function SellerDisputeList({ disputes, loading }: SellerDisputeListProps)
         </Card>
     )
 }
+
+    
