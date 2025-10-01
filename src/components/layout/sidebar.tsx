@@ -144,10 +144,7 @@ export function AppSidebar() {
   };
 
   const isNavItemActive = (href: string) => {
-    if (href === '/dashboard') return pathname === href || (pathname.startsWith('/seller') && href === '/dashboard');
     if (href === '/') return pathname === '/';
-    // For nested routes like /seller/projects, we want the /seller parent to be active.
-    // However, the current logic is fine for exact matches or startsWith.
     return pathname.startsWith(href);
   };
   

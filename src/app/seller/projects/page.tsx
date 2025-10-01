@@ -65,14 +65,6 @@ export default function SellerProjectsPage() {
     return () => unsubscribe();
   }, [user, toast]);
 
-  const getStatusIcon = (status: Project['status']) => {
-    switch (status) {
-      case 'Verified': return <CheckCircle className="h-5 w-5 text-primary" />;
-      case 'Pending': return <Clock className="h-5 w-5 text-yellow-500" />;
-      case 'Rejected': return <AlertTriangle className="h-5 w-5 text-destructive" />;
-    }
-  };
-
   const getStatusBadge = (status: Project['status']) => {
     switch (status) {
         case 'Verified': return 'secondary';
@@ -80,7 +72,6 @@ export default function SellerProjectsPage() {
         case 'Rejected': return 'destructive';
     }
   }
-
 
   return (
     <div className="space-y-8">
@@ -121,8 +112,8 @@ export default function SellerProjectsPage() {
                 </div>
               </CardContent>
               <CardContent>
-                 <Button variant="outline" className="w-full">
-                    Manage Project
+                 <Button asChild variant="outline" className="w-full" disabled={project.status !== 'Verified'}>
+                    <Link href={`/seller/projects/${project.id}`}>Manage Project</Link>
                  </Button>
               </CardContent>
             </Card>
@@ -146,5 +137,3 @@ export default function SellerProjectsPage() {
     </div>
   );
 }
-
-    
