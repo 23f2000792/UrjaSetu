@@ -45,7 +45,7 @@ const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/marketplace', icon: Store, label: 'Marketplace' },
   { href: '/portfolio', icon: Wallet, label: 'Portfolio' },
-  { href: '/insights', icon: Lightbulb, label: 'Insights' },
+  { href: '/insights', icon: Lightbulb, label: 'AI Insights' },
   { href: '/staking', icon: Coins, label: 'Staking' },
   { href: '/rewards', icon: Gift, label: 'Rewards' },
   { href: '/documents', icon: FileText, label: 'Documents' },
@@ -82,6 +82,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.label}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton
+                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -102,6 +103,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.label}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton
+                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -199,7 +201,7 @@ export function AppSidebar() {
           <div className="p-2 group-data-[collapsible=icon]:hidden">
              <SidebarSeparator />
             <Link href="/profile" passHref>
-              <Button className="w-full">
+              <Button as="a" className="w-full">
                 <LogIn className="mr-2 h-4 w-4" />
                 Login
               </Button>
