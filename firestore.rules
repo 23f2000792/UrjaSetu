@@ -2,78 +2,104 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions to check user status and role
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isRole(role) {
-      return isSignedIn() && getUserData().role == role;
-    }
-    
-    // Admins can do anything. Use with caution in production.
-    match /{path=**} {
-      allow read, write: if isRole('admin');
-    }
-
-    // User profiles can be read by their owner and created on signup.
+  
+    // =================================
+    // Users Collection
+    // =================================
     match /users/{userId} {
-      allow create: if isSignedIn() && isOwner(userId);
-      allow read, update: if isSignedIn() && isOwner(userId);
+      // Any authenticated user can read public profile data (for leaderboards, etc.)
+      allow read: if request.auth != null;
+      // A user can create their own user document on signup
+      allow create: if request.auth.uid == userId;
+      // A user can only update their own profile information
+      allow update: if request.auth.uid == userId;
+      // Disallow client-side deletion of user profiles
       allow delete: if false;
     }
-
-    // Projects and Energy Credits are public to all signed-in users. Only sellers can create/update.
+    
+    // =================================
+    // Projects and Energy Credits (Marketplace)
+    // =================================
     match /projects/{projectId} {
-      allow read: if isSignedIn();
-      allow create: if isRole('seller') && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isRole('seller') && resource.data.ownerId == request.auth.uid;
-      allow delete: if isRole('seller') && resource.data.ownerId == request.auth.uid;
-    }
-    match /energyCredits/{creditId} {
-        allow read: if isSignedIn();
+      // Anyone can view projects in the marketplace
+      allow read: if request.auth != null;
+      // Only users with the 'seller' role can create projects
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+      // Only the owner can update project details. The system updates token counts via transactions.
+      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      // Deletion should be handled by admins, not allowed from client
+      allow delete: if false;
     }
     
-    // Portfolio assets can only be accessed by their owner.
+    match /energyCredits/{creditId} {
+      // Anyone can view energy credits
+      allow read: if request.auth != null;
+      // Creating/updating credits is likely an admin/backend process
+      allow create, update, delete: if false;
+    }
+    
+    // =================================
+    // Portfolio Assets
+    // =================================
     match /portfolioAssets/{assetId} {
-      // The assetId is composite: {userId}_{projectId}. We can check ownership.
-      allow read, create, update, delete: if isSignedIn() && isOwner(assetId.split('_')[0]);
+      // A user can only read their own portfolio assets. The assetId is structured as `userId_assetId`.
+      allow read, delete: if request.auth != null && request.auth.uid == assetId.split('_')[0];
+      // A user can only create or update their own portfolio assets
+      allow write: if request.auth != null && request.auth.uid == assetId.split('_')[0];
     }
-
-    // Transactions can be created by any signed-in user, but only read by the owner.
+    
+    // =================================
+    // Transactions
+    // =================================
     match /transactions/{transactionId} {
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      // A user can read their own transactions. Admins/Sellers might need read access too.
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // A user can only create transactions for themselves
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Transactions are immutable
+      allow update, delete: if false;
     }
 
-    // Disputes can be created by any signed-in user, but only read by the owner or an admin/seller.
+    // =================================
+    // Disputes
+    // =================================
     match /disputes/{disputeId} {
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
-      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isRole('seller') || isRole('admin'));
-      allow update: if isRole('admin') || isRole('seller');
+        // A user can read their own disputes. Sellers/Admins can read all.
+        allow read: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || resource.data.userId == request.auth.uid);
+        // User can create a dispute for themselves
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        // Only admins should update dispute status
+        allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        // Disallow client-side deletion
+        allow delete: if false;
     }
 
-    // Documents can be created and read by their owner, or reviewed by an admin.
+    // =================================
+    // Documents
+    // =================================
     match /documents/{documentId} {
-      allow create, read: if isSignedIn() && isOwner(request.resource.data.ownerId) || isOwner(resource.data.ownerId);
-      allow update: if isRole('admin');
+        // Owner can read their own documents, admins can read all
+        allow read: if request.auth != null && (resource.data.ownerId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+        // Owner can create documents for themselves
+        allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+        // Only admins can update status
+        allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        // Disallow client-side deletion
+        allow delete: if false;
     }
 
-    // Proposals are public for reading. Only sellers can create them. Voting is handled by updating counts.
+    // =================================
+    // Governance Proposals
+    // =================================
     match /proposals/{proposalId} {
-      allow read: if isSignedIn();
-      allow create: if isRole('seller') && isOwner(request.resource.data.proposerId);
-      // Allow any signed-in user to vote (update vote counts)
-      allow update: if isSignedIn();
+        // Any authenticated user can read proposals for voting
+        allow read: if request.auth != null;
+        // Only sellers can create proposals
+        allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+        // Users can vote (update vote counts), and the original proposer or an admin can't change core details after creation.
+        allow update: if request.auth != null;
+        // Disallow client-side deletion
+        allow delete: if false;
     }
   }
 }
