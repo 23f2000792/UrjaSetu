@@ -39,10 +39,16 @@ export default function ReportingPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ReportingData[]>([]);
-    const [date, setDate] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 30),
-        to: new Date(),
-    });
+    const [date, setDate] = useState<DateRange | undefined>(undefined);
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+        setDate({
+            from: subDays(new Date(), 30),
+            to: new Date(),
+        });
+    }, []);
 
     useEffect(() => {
         const unsubscribeAuth = auth.onAuthStateChanged(setUser);
@@ -51,8 +57,8 @@ export default function ReportingPage() {
 
     useEffect(() => {
         if (!user || !date?.from) {
-            setLoading(false);
             setData([]);
+            if(user) setLoading(false);
             return;
         };
 
@@ -149,7 +155,8 @@ export default function ReportingPage() {
                         className="w-[260px] justify-start text-left font-normal"
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
+                        {!isClient && <span>Loading...</span>}
+                        {isClient && date?.from ? (
                             date.to ? (
                             <>
                                 {format(date.from, "LLL dd, y")} -{" "}
@@ -158,9 +165,9 @@ export default function ReportingPage() {
                             ) : (
                             format(date.from, "LLL dd, y")
                             )
-                        ) : (
+                        ) : isClient ? (
                             <span>Pick a date</span>
-                        )}
+                        ) : null}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
@@ -238,5 +245,3 @@ export default function ReportingPage() {
     </div>
   );
 }
-
-    
