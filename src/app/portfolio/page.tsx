@@ -10,7 +10,7 @@ import { Download, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import type { PortfolioAsset } from '@/lib/mock-data';
+import type { PortfolioAsset, Transaction, SolarProject, EnergyCredit } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
 export default function PortfolioPage() {
@@ -33,18 +33,70 @@ export default function PortfolioPage() {
         }
 
         setLoading(true);
-        // The id of portfolio assets is `userId_assetId`
-        const q = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const assets: PortfolioAsset[] = [];
-            querySnapshot.forEach((doc) => {
-                assets.push({ id: doc.id, ...doc.data() } as PortfolioAsset);
+
+        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
+        const projectsQuery = collection(db, "projects");
+        const creditsQuery = collection(db, "energyCredits");
+
+        const unsubTransactions = onSnapshot(transactionsQuery, (transactionsSnapshot) => {
+            const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
+                const unsubCredits = onSnapshot(creditsQuery, (creditsSnapshot) => {
+                    
+                    const projectsData = new Map<string, SolarProject>();
+                    projectsSnapshot.forEach(doc => projectsData.set(doc.id, doc.data() as SolarProject));
+                    
+                    const creditsData = new Map<string, EnergyCredit>();
+                    creditsSnapshot.forEach(doc => creditsData.set(doc.id, doc.data() as EnergyCredit));
+
+                    const transactions: Transaction[] = [];
+                    transactionsSnapshot.forEach((doc) => {
+                        transactions.push(doc.data() as Transaction);
+                    });
+
+                    const aggregatedAssets: { [key: string]: PortfolioAsset } = {};
+
+                    transactions.forEach(tx => {
+                        if (tx.type !== 'Buy') return;
+
+                        const assetId = tx.projectId;
+                        const marketAsset = projectsData.get(assetId) || creditsData.get(assetId);
+                        const currentValue = (marketAsset as any)?.tokenPrice || (marketAsset as any)?.price || 0;
+
+                        if (!aggregatedAssets[assetId]) {
+                            aggregatedAssets[assetId] = {
+                                id: assetId,
+                                name: tx.projectName,
+                                type: creditsData.has(assetId) ? 'Credit' : 'Project',
+                                quantity: 0,
+                                purchasePrice: 0, // This will be an average
+                                currentValue: currentValue,
+                                userId: tx.userId
+                            };
+                        }
+
+                        const existingAsset = aggregatedAssets[assetId];
+                        const oldTotalCost = existingAsset.purchasePrice * existingAsset.quantity;
+                        const newTotalCost = oldTotalCost + tx.totalCost;
+                        const newTotalQuantity = existingAsset.quantity + tx.quantity;
+                        
+                        existingAsset.quantity = newTotalQuantity;
+                        existingAsset.purchasePrice = newTotalCost / newTotalQuantity;
+                        existingAsset.currentValue = currentValue;
+                    });
+                    
+                    const assetsArray = Object.values(aggregatedAssets);
+                    setPortfolioAssets(assetsArray);
+                    setLoading(false);
+                });
+                return unsubCredits;
             });
-            setPortfolioAssets(assets);
-            setLoading(false);
+            return unsubProjects;
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubTransactions();
+            // The other listeners will be cleaned up inside their callbacks
+        };
     }, [user]);
 
     const totalValue = portfolioAssets.reduce((acc, asset) => acc + (asset.currentValue * asset.quantity), 0);
@@ -74,12 +126,10 @@ export default function PortfolioPage() {
     }
 
     const getAssetMarketplaceId = (assetId: string, type: 'Project' | 'Credit') => {
-        // The portfolio asset ID is `userId_assetId`, so we extract the original assetId.
-        const originalAssetId = assetId.split('_').pop();
         if (type === 'Credit') {
-            return `credit-${originalAssetId}`;
+            return `credit-${assetId}`;
         }
-        return originalAssetId;
+        return assetId;
     }
 
   return (
@@ -158,5 +208,3 @@ export default function PortfolioPage() {
     </div>
   );
 }
-
-    

@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { auth, db } from '@/lib/firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
+import type { SolarProject, EnergyCredit, Transaction } from '@/lib/mock-data';
 
 export default function SellPage() {
     const params = useParams();
@@ -36,7 +36,7 @@ export default function SellPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
-    const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
+    const [portfolioInfo, setPortfolioInfo] = useState<{quantity: number, purchasePrice: number} | null>(null);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
 
@@ -53,41 +53,57 @@ export default function SellPage() {
      useEffect(() => {
         if (!assetId || !user) return;
 
-        const fetchAssets = async () => {
-            setLoading(true);
-            
-            // Fetch portfolio asset
-            const portfolioDocRef = doc(db, "portfolioAssets", `${user.uid}_${assetId}`);
-            const portfolioDocSnap = await getDoc(portfolioDocRef);
-            if (portfolioDocSnap.exists()) {
-                setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
-            }
-
-            // Fetch market asset
+        const fetchMarketAsset = async () => {
             const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
             const marketDocRef = doc(db, marketCollectionName, assetId);
             const marketDocSnap = await getDoc(marketDocRef);
             if (marketDocSnap.exists()) {
                 setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
             }
+        };
+        
+        const subscribeToTransactions = () => {
+            const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId), where("type", "==", "Buy"));
+             const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+                let totalQuantity = 0;
+                let totalCost = 0;
+                snapshot.forEach(doc => {
+                    const tx = doc.data() as Transaction;
+                    totalQuantity += tx.quantity;
+                    totalCost += tx.totalCost;
+                });
 
-            setLoading(false);
+                if (totalQuantity > 0) {
+                    setPortfolioInfo({
+                        quantity: totalQuantity,
+                        purchasePrice: totalCost / totalQuantity
+                    });
+                } else {
+                    setPortfolioInfo(null);
+                }
+                setLoading(false);
+            });
+            return unsubscribe;
         };
 
-        fetchAssets();
+        setLoading(true);
+        fetchMarketAsset();
+        const unsubTransactions = subscribeToTransactions();
+
+        return () => unsubTransactions();
     }, [assetId, isCredit, user]);
     
     if (loading) {
         return <div>Loading...</div>;
     }
 
-    if (!marketAsset || !portfolioAsset) {
+    if (!marketAsset || !portfolioInfo) {
         return <div>Asset not found in your portfolio.</div>;
     }
     
     const name = (marketAsset as any).name || `${(marketAsset as any).projectName} Credits`;
-    const unit = portfolioAsset.type === 'Project' ? 'Token(s)' : 'kWh';
-    const price = portfolioAsset.currentValue;
+    const unit = (marketAsset as SolarProject).totalTokens ? 'Token(s)' : 'kWh';
+    const price = (marketAsset as any).tokenPrice || (marketAsset as any).price;
 
     const totalValue = quantity * price;
 
@@ -97,7 +113,7 @@ export default function SellPage() {
             return;
         }
 
-        if (quantity > portfolioAsset.quantity) {
+        if (quantity > portfolioInfo.quantity) {
              toast({ title: "Invalid Quantity", description: "You cannot sell more than you own.", variant: "destructive" });
             return;
         }
@@ -152,8 +168,8 @@ export default function SellPage() {
                 <CardHeader>
                     <CardTitle>Sell {name}</CardTitle>
                     <CardDescription>
-                        You currently hold {portfolioAsset.quantity.toLocaleString()} {unit}. 
-                        The current market price is Rs. {price.toFixed(2)} per {portfolioAsset.type === 'Project' ? 'Token' : 'kWh'}.
+                        You currently hold {portfolioInfo.quantity.toLocaleString()} {unit}. 
+                        The current market price is Rs. {price.toFixed(2)} per {(marketAsset as SolarProject).totalTokens ? 'Token' : 'kWh'}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -165,7 +181,7 @@ export default function SellPage() {
                             value={quantity}
                             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                             min="1"
-                            max={portfolioAsset.quantity}
+                            max={portfolioInfo.quantity}
                         />
                     </div>
 

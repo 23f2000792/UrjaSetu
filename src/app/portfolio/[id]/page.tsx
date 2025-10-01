@@ -9,8 +9,8 @@ import { ArrowLeft, Zap, TrendingUp, PieChart, Wallet, ShoppingCart, Send } from
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit, PortfolioAsset, Transaction } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
 export default function PortfolioAssetDetailPage() {
@@ -18,7 +18,7 @@ export default function PortfolioAssetDetailPage() {
     const router = useRouter();
     const id = params.id as string; // This is the marketplace ID
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
-    const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
+    const [portfolioInfo, setPortfolioInfo] = useState<{quantity: number, purchasePrice: number} | null>(null);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
 
@@ -35,36 +35,54 @@ export default function PortfolioAssetDetailPage() {
     useEffect(() => {
         if (!assetId || !user) return;
 
-        const fetchAssets = async () => {
-            setLoading(true);
-            
-            // Fetch portfolio asset using composite ID
-            const portfolioAssetId = `${user.uid}_${assetId}`;
-            const portfolioDocRef = doc(db, "portfolioAssets", portfolioAssetId);
-            const portfolioDocSnap = await getDoc(portfolioDocRef);
-            if (portfolioDocSnap.exists()) {
-                setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
-            }
-
-            // Fetch market asset
+        const fetchMarketAsset = async () => {
             const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
             const marketDocRef = doc(db, marketCollectionName, assetId);
             const marketDocSnap = await getDoc(marketDocRef);
             if (marketDocSnap.exists()) {
                 setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
             }
-
-            setLoading(false);
         };
 
-        fetchAssets();
+        const subscribeToTransactions = () => {
+            const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId));
+            const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+                let totalQuantity = 0;
+                let totalCost = 0;
+                snapshot.forEach(doc => {
+                    const tx = doc.data() as Transaction;
+                    if (tx.type === 'Buy') {
+                        totalQuantity += tx.quantity;
+                        totalCost += tx.totalCost;
+                    }
+                    // Handle 'Sell' logic if needed
+                });
+
+                if (totalQuantity > 0) {
+                    setPortfolioInfo({
+                        quantity: totalQuantity,
+                        purchasePrice: totalCost / totalQuantity
+                    });
+                } else {
+                    setPortfolioInfo(null);
+                }
+                setLoading(false);
+            });
+            return unsubscribe;
+        };
+
+        setLoading(true);
+        fetchMarketAsset();
+        const unsubTransactions = subscribeToTransactions();
+
+        return () => unsubTransactions();
     }, [assetId, isCredit, user]);
 
     if (loading) {
         return <div>Loading asset details...</div>;
     }
 
-    if (!marketAsset || !portfolioAsset) {
+    if (!marketAsset || !portfolioInfo) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center py-12">
                 <h1 className="text-2xl font-bold">Asset not found</h1>
@@ -80,7 +98,8 @@ export default function PortfolioAssetDetailPage() {
     }
     
     const name = (marketAsset as any).name || `${(marketAsset as any).projectName} Credits`;
-    const totalValue = portfolioAsset.quantity * portfolioAsset.currentValue;
+    const currentValue = (marketAsset as any).tokenPrice || (marketAsset as any).price;
+    const totalValue = portfolioInfo.quantity * currentValue;
 
     return (
         <div className="space-y-8">
@@ -104,7 +123,7 @@ export default function PortfolioAssetDetailPage() {
                          <CardContent className="grid sm:grid-cols-2 gap-6 text-lg">
                             <div>
                                 <p className="text-sm text-muted-foreground">Quantity Held</p>
-                                <p className="font-bold text-2xl">{portfolioAsset.quantity.toLocaleString()} {portfolioAsset.type === 'Project' ? 'Tokens' : 'kWh'}</p>
+                                <p className="font-bold text-2xl">{portfolioInfo.quantity.toLocaleString()} {(marketAsset as SolarProject).totalTokens ? 'Tokens' : 'kWh'}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Current Market Value</p>
@@ -112,11 +131,11 @@ export default function PortfolioAssetDetailPage() {
                             </div>
                              <div>
                                 <p className="text-sm text-muted-foreground">Average Purchase Price</p>
-                                <p className="font-bold text-2xl">Rs. {portfolioAsset.purchasePrice.toFixed(2)}</p>
+                                <p className="font-bold text-2xl">Rs. {portfolioInfo.purchasePrice.toFixed(2)}</p>
                             </div>
                              <div>
                                 <p className="text-sm text-muted-foreground">Unrealized Gain/Loss</p>
-                                <p className="font-bold text-2xl">Rs. {(totalValue - (portfolioAsset.purchasePrice * portfolioAsset.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <p className="font-bold text-2xl">Rs. {(totalValue - (portfolioInfo.purchasePrice * portfolioInfo.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                          </CardContent>
                     </Card>
@@ -165,5 +184,3 @@ export default function PortfolioAssetDetailPage() {
         </div>
     );
 }
-
-    
