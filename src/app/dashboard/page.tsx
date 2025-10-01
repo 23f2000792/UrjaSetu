@@ -201,45 +201,65 @@ function SellerDashboard({ user }: { user: User | null }) {
     const [projects, setProjects] = useState<SolarProject[]>([]);
     const [recentSales, setRecentSales] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
-
+    
     useEffect(() => {
         if (!user) {
             setLoading(false);
             return;
-        };
-        
+        }
+
         setLoading(true);
 
         const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
         const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
             const projectsData: SolarProject[] = [];
             const projectIds: string[] = [];
+            
             projectsSnapshot.forEach((doc) => {
                 const project = { id: doc.id, ...doc.data() } as SolarProject;
                 projectsData.push(project);
                 projectIds.push(project.id);
             });
             setProjects(projectsData);
-            
-            if(projectIds.length > 0) {
-                 // Fetch transactions for these projects
-                const salesQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
-                const unsubSales = onSnapshot(salesQuery, (salesSnapshot) => {
-                    const salesData: Transaction[] = [];
-                    salesSnapshot.forEach(doc => {
-                        salesData.push({id: doc.id, ...doc.data()} as Transaction);
+            setLoading(false); // Set loading to false after projects are fetched
+
+            // Clean up previous listeners
+            const salesListeners: (() => void)[] = [];
+
+            // Now, set up listeners for each project's transactions
+            if (projectIds.length > 0) {
+                const allSales: { [key: string]: Transaction } = {};
+
+                projectIds.forEach(projectId => {
+                    const salesQuery = query(collection(db, "transactions"), where("projectId", "==", projectId));
+                    const unsubSale = onSnapshot(salesQuery, (salesSnapshot) => {
+                        salesSnapshot.forEach(doc => {
+                            allSales[doc.id] = { id: doc.id, ...doc.data() } as Transaction;
+                        });
+
+                        const sortedSales = Object.values(allSales)
+                            .sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
+                            .slice(0, 10); // get latest 10 across all projects
+
+                        setRecentSales(sortedSales);
                     });
-                    setRecentSales(salesData.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
+                    salesListeners.push(unsubSale);
                 });
-                setLoading(false);
-                return unsubSales;
             } else {
-                 setLoading(false);
+                setRecentSales([]);
             }
+
+            // Return a cleanup function that unsubscribes from all sales listeners
+            return () => {
+                salesListeners.forEach(unsub => unsub());
+            };
         });
 
-        return () => unsubProjects();
+        return () => {
+            unsubProjects();
+        };
     }, [user]);
+
 
     // Aggregate data from projects
     const totalRevenue = projects.reduce((acc, p) => {
