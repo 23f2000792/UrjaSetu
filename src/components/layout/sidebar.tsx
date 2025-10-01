@@ -43,8 +43,9 @@ import {
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { signOut as firebaseSignOut } from 'firebase/auth'; // Renamed to avoid conflict
+import { signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'; 
 import { auth } from '@/lib/firebase';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 
 
@@ -72,21 +73,21 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      if (!user) {
-        // Clear role on logout
-        localStorage.removeItem('userRole');
-        setRole(null);
-      } else {
-        // Get role from localStorage on login
+      if (user) {
         const userRole = localStorage.getItem('userRole');
         setRole(userRole);
+      } else {
+        localStorage.removeItem('userRole');
+        setRole(null);
       }
+      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -96,7 +97,7 @@ export function AppSidebar() {
   const handleLogout = async () => {
     try {
       await firebaseSignOut(auth);
-      localStorage.removeItem('userRole');
+      // user state will be updated by onAuthStateChanged listener
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
@@ -117,6 +118,10 @@ export function AppSidebar() {
   };
   
   const navItems = role === 'seller' ? sellerNavItems : userNavItems;
+
+  if (isLoading) {
+    return null; // or a loading skeleton
+  }
 
   return (
     <>
@@ -163,7 +168,7 @@ export function AppSidebar() {
                           <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium">{role === 'seller' ? 'Seller' : 'Buyer'}</span>
+                          <span className="text-sm font-medium capitalize">{role}</span>
                           <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>
@@ -241,3 +246,5 @@ export function AppSidebar() {
     </>
   );
 }
+
+    
