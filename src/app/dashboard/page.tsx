@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Zap, Leaf, ShieldAlert, DollarSign, ListTree } from "lucide-react";
+import { Zap, Leaf, ShieldAlert, DollarSign, ListTree, Sun } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
@@ -168,9 +168,8 @@ function SellerDashboard({ user }: { user: User | null }) {
     }, 0);
     const activeProjectsCount = projects.length;
     const pendingProjectsCount = projects.filter(p => (p as any).status === 'Pending').length;
-    // Mock energy sold for now
     const energySold = projects.reduce((acc, p) => acc + (p.totalTokens - p.tokensAvailable) * 120, 0); // Assuming 1 token = 120kWh
-
+    const totalCapacity = projects.reduce((acc, p) => acc + p.capacity, 0);
 
   return (
     <div className="space-y-8">
@@ -209,12 +208,12 @@ function SellerDashboard({ user }: { user: User | null }) {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pending Documents</CardTitle>
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">Total Capacity</CardTitle>
+                    <Sun className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">No documents awaiting review</p>
+                    <div className="text-2xl font-bold">{(totalCapacity / 1000).toLocaleString()} MW</div>
+                    <p className="text-xs text-muted-foreground">Across all your projects</p>
                 </CardContent>
             </Card>
       </div>
