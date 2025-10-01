@@ -91,11 +91,18 @@ export default function TradePage() {
             const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
 
             await runTransaction(db, async (transaction) => {
+                // --- All READS must happen before all WRITES ---
+
+                // 1. Read the project document
                 const projectDoc = await transaction.get(projectRef);
                 if (!projectDoc.exists()) {
                     throw "Project does not exist!";
                 }
 
+                // 2. Read the user's portfolio asset document
+                const portfolioDoc = await transaction.get(portfolioAssetRef);
+
+                // --- Perform checks on read data ---
                 const currentProjectData = projectDoc.data() as SolarProject;
                 const newTokensAvailable = currentProjectData.tokensAvailable - quantity;
 
@@ -103,10 +110,12 @@ export default function TradePage() {
                     throw "Not enough tokens available for this purchase.";
                 }
 
-                // 1. Update project token availability
+                // --- All WRITES happen after all reads ---
+
+                // 3. Update project token availability
                 transaction.update(projectRef, { tokensAvailable: newTokensAvailable });
 
-                // 2. Create a transaction record
+                // 4. Create a transaction record
                 const transactionData = {
                     userId: user.uid,
                     projectId: asset.id,
@@ -121,8 +130,7 @@ export default function TradePage() {
                 const newTransactionRef = doc(collection(db, "transactions"));
                 transaction.set(newTransactionRef, transactionData);
 
-                // 3. Create or update user's portfolio asset
-                const portfolioDoc = await transaction.get(portfolioAssetRef);
+                // 5. Create or update user's portfolio asset
                 if (portfolioDoc.exists()) {
                     // Update existing asset
                     const currentPortfolioAsset = portfolioDoc.data() as PortfolioAsset;
