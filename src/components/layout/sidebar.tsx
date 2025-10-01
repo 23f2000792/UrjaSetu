@@ -39,6 +39,7 @@ import {
   LogIn,
   Gavel,
   AreaChart,
+  Briefcase,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
@@ -62,9 +63,9 @@ const userNavItems = [
 
 const sellerNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/seller/documents', icon: Shield, label: 'Document Review' },
+    { href: '/seller/projects', icon: Briefcase, label: 'My Projects' },
+    { href: '/seller/documents', icon: FileText, label: 'My Documents' },
     { href: '/seller/disputes', icon: Gavel, label: 'Dispute Management' },
-    { href: '/documents', icon: FileText, label: 'My Documents' },
 ];
 
 const sharedBottomNavItems = [
@@ -227,7 +228,7 @@ export function AppSidebar() {
                           <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium capitalize">{role}</span>
+                          <span className="text-sm font-medium capitalize">{role === 'seller' ? 'Solar Farm Owner' : 'Buyer'}</span>
                           <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>

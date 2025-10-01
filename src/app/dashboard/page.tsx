@@ -3,10 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Zap, Leaf, ShieldAlert } from "lucide-react";
+import { Zap, Leaf, ShieldAlert, DollarSign, ListTree } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
-import { SellerStats } from "@/components/seller/seller-stats";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -123,67 +122,71 @@ function UserDashboard() {
 function SellerDashboard() {
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-primary">Seller Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-primary">Solar Farm Owner Dashboard</h1>
 
-      <SellerStats />
+       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">Rs. 5,42,300</div>
+                    <p className="text-xs text-muted-foreground">+18.2% this month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+                    <ListTree className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">4</div>
+                    <p className="text-xs text-muted-foreground">1 pending verification</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Energy Sold</CardTitle>
+                    <Zap className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">25,800 kWh</div>
+                    <p className="text-xs text-muted-foreground">in the last 30 days</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pending Documents</CardTitle>
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">2</div>
+                    <p className="text-xs text-muted-foreground">awaiting review</p>
+                </CardContent>
+            </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Marketplace Performance</CardTitle>
-            <CardDescription>An overview of trading volume and activity.</CardDescription>
+            <CardTitle>Sales Performance</CardTitle>
+            <CardDescription>An overview of token sales and revenue.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for a more detailed admin-specific chart */}
             <PortfolioChart />
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Recent Platform Activity</CardTitle>
-            <CardDescription>A feed of recent user actions.</CardDescription>
+            <CardTitle>Recent Sales Activity</CardTitle>
+            <CardDescription>A feed of recent token purchases.</CardDescription>
           </CardHeader>
           <CardContent>
-             {/* Placeholder for admin-specific activity feed */}
             <RecentActivity />
           </CardContent>
         </Card>
       </div>
-       <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ShieldAlert />Monitoring</CardTitle>
-            <CardDescription>Key areas for administrative oversight.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="text-lg">Pending KYC</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <p className="text-3xl font-bold">5</p>
-                      <p className="text-sm text-muted-foreground">verifications to review</p>
-                  </CardContent>
-              </Card>
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="text-lg">Open Disputes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <p className="text-3xl font-bold">2</p>
-                      <p className="text-sm text-muted-foreground">cases require attention</p>
-                  </CardContent>
-              </Card>
-               <Card>
-                  <CardHeader>
-                      <CardTitle className="text-lg">Suspicious Activity</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <p className="text-3xl font-bold">1</p>
-                      <p className="text-sm text-muted-foreground">flagged transaction</p>
-                  </CardContent>
-              </Card>
-          </CardContent>
-        </Card>
     </div>
   );
 }
