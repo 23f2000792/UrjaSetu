@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "sp1",
+      "description": "Mojave Solar Park",
+      "imageUrl": "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzb2xhciUyMHBhbmVsc3xlbnwwfHx8fDE3NTkyNTgzNTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "solar panels"
+    },
+    {
+      "id": "sp2",
+      "description": "Thar Desert Array",
+      "imageUrl": "https://images.unsplash.com/photo-1720258553098-a05b77b7adba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxkZXNlcnQlMjBzb2xhcnxlbnwwfHx8fDE3NTkzMjQ5MzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "desert solar"
+    },
+    {
+      "id": "sp3",
+      "description": "Rooftop Revolution",
+      "imageUrl": "https://images.unsplash.com/flagged/photo-1566838616631-f2618f74a6a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxyb29mdG9wJTIwc29sYXJ8ZW58MHx8fHwxNzU5MzI0OTM0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "rooftop solar"
+    },
+    {
+      "id": "sp4",
+      "description": "Sunshine Valley",
+      "imageUrl": "https://images.unsplash.com/photo-1586366461834-d2d65d725a2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzb2xhciUyMGZhcm18ZW58MHx8fHwxNzU5MjkwNzQyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "solar farm"
+    },
+    {
+      "id": "ec1",
+      "description": "Energy grid for Mojave Solar Park credits",
+      "imageUrl": "https://images.unsplash.com/photo-1454779132693-e5cd0a216ed3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxlbmVyZ3klMjBncmlkfGVufDB8fHx8MTc1OTMyNDkzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "energy grid"
+    },
+    {
+      "id": "ec2",
+      "description": "Power lines for Thar Desert Array credits",
+      "imageUrl": "https://images.unsplash.com/photo-1610028290816-5d937a395a49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwb3dlciUyMGxpbmVzfGVufDB8fHx8MTc1OTIzNzI3MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "power lines"
+    },
+    {
+      "id": "ec3",
+      "description": "City energy for Rooftop Revolution credits",
+      "imageUrl": "https://images.unsplash.com/photo-1645621760780-a486038186ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjaXR5JTIwZW5lcmd5fGVufDB8fHx8MTc1OTMyNDkzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "city energy"
+    },
+    {
+      "id": "user-avatar",
+      "description": "User profile avatar",
+      "imageUrl": "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTkzMDY0NTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    }
+  ]
 }
