@@ -199,6 +199,7 @@ function UserDashboard({ user }: { user: User | null }) {
 
 function SellerDashboard({ user }: { user: User | null }) {
     const [projects, setProjects] = useState<SolarProject[]>([]);
+    const [recentSales, setRecentSales] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -206,18 +207,38 @@ function SellerDashboard({ user }: { user: User | null }) {
             setLoading(false);
             return;
         };
+        
+        setLoading(true);
 
-        const q = query(collection(db, "projects"), where("ownerId", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+        const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
             const projectsData: SolarProject[] = [];
-            querySnapshot.forEach((doc) => {
-                projectsData.push({ id: doc.id, ...doc.data() } as SolarProject);
+            const projectIds: string[] = [];
+            projectsSnapshot.forEach((doc) => {
+                const project = { id: doc.id, ...doc.data() } as SolarProject;
+                projectsData.push(project);
+                projectIds.push(project.id);
             });
             setProjects(projectsData);
-            setLoading(false);
+            
+            if(projectIds.length > 0) {
+                 // Fetch transactions for these projects
+                const salesQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
+                const unsubSales = onSnapshot(salesQuery, (salesSnapshot) => {
+                    const salesData: Transaction[] = [];
+                    salesSnapshot.forEach(doc => {
+                        salesData.push({id: doc.id, ...doc.data()} as Transaction);
+                    });
+                    setRecentSales(salesData.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
+                });
+                setLoading(false);
+                return unsubSales;
+            } else {
+                 setLoading(false);
+            }
         });
 
-        return () => unsubscribe();
+        return () => unsubProjects();
     }, [user]);
 
     // Aggregate data from projects
@@ -289,10 +310,10 @@ function SellerDashboard({ user }: { user: User | null }) {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Sales Activity</CardTitle>
-            <CardDescription>A feed of recent token purchases.</CardDescription>
+            <CardDescription>A feed of recent token purchases for your projects.</CardDescription>
           </CardHeader>
           <CardContent>
-            <RecentActivity activities={[]} loading={loading} />
+            <RecentActivity activities={recentSales} loading={loading} />
           </CardContent>
         </Card>
       </div>
