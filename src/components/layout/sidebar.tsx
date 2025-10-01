@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   SidebarHeader,
   SidebarContent,
@@ -42,6 +42,10 @@ import {
   AreaChart,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useToast } from '@/hooks/use-toast';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
 
 
 const navItems = [
@@ -62,11 +66,41 @@ const adminNavItems = [
     { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
 ]
 
-const isAuthenticated = false; // Mock authentication state
-
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [user, setUser] = useState<any>(null); // Replace 'any' with your user type
+  const [isAdmin, setIsAdmin] = useState(false); // Mock admin state
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      // In a real app, you'd check for an admin role from Firestore or custom claims
+      // For this mock, we'll just keep it simple.
+      // e.g. setIsAdmin(user.claims.admin === true)
+    });
+    return () => unsubscribe();
+  }, []);
+
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+        variant: "destructive",
+      });
+    }
+  };
 
 
   const isNavItemActive = (href: string) => {
@@ -108,30 +142,33 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
         
-        <SidebarSeparator />
-        
-        <SidebarMenu>
-            <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
-             {adminNavItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={isNavItemActive(item.href)}
-                  tooltip={item.label}
-                  className="justify-start"
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {isAdmin && (
+            <>
+                <SidebarSeparator />
+                <SidebarMenu>
+                    <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
+                    {adminNavItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                    <Link href={item.href}>
+                        <SidebarMenuButton
+                        isActive={isNavItemActive(item.href)}
+                        tooltip={item.label}
+                        className="justify-start"
+                        >
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                        </SidebarMenuButton>
+                    </Link>
+                    </SidebarMenuItem>
+                ))}
+                </SidebarMenu>
+            </>
+        )}
 
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">
-        {isAuthenticated ? (
+        {user ? (
           <>
             {/* Expanded Footer */}
             <div className="group-data-[collapsible=icon]:hidden">
@@ -143,11 +180,11 @@ export function AppSidebar() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
-                          <AvatarFallback>U</AvatarFallback>
+                          <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium">User Name</span>
-                          <span className="text-xs text-muted-foreground">user@email.com</span>
+                          <span className="text-sm font-medium">User</span>
+                          <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>
                     </Button>
@@ -166,7 +203,7 @@ export function AppSidebar() {
                       <span>Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -183,7 +220,7 @@ export function AppSidebar() {
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
                       <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
-                      <AvatarFallback>U</AvatarFallback>
+                      <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="end" className="w-56">
@@ -200,7 +237,7 @@ export function AppSidebar() {
                       <span>Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>

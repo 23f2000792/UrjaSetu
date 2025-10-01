@@ -6,7 +6,7 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { AdminStats } from "@/components/admin/admin-stats";
 
 export default function DashboardPage() {
-  const isAdmin = true; // Mock admin state
+  const isAdmin = false; // Mock admin state - defaulting to user view
 
   if (isAdmin) {
     return <AdminDashboard />
