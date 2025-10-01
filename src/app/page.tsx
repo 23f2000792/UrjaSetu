@@ -22,13 +22,13 @@ export default function LandingPage() {
         </Link>
         <nav className="ml-auto flex items-center gap-4 sm:gap-6">
           <Link
-            href="/dashboard"
+            href="/login"
             className="text-sm font-medium hover:text-primary transition-colors"
           >
             Login
           </Link>
           <Button asChild>
-            <Link href="/dashboard">Get Started</Link>
+            <Link href="/signup">Get Started</Link>
           </Button>
         </nav>
       </header>
@@ -48,7 +48,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Button asChild size="lg">
-                    <Link href="/dashboard">
+                    <Link href="/marketplace">
                       Explore Marketplace
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
@@ -208,7 +208,7 @@ export default function LandingPage() {
             </div>
             <div className="mx-auto w-full max-w-sm space-y-2">
                <Button asChild size="lg" variant="secondary">
-                <Link href="/dashboard">
+                <Link href="/signup">
                   Sign Up Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

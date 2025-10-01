@@ -9,9 +9,10 @@ import React from "react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isLandingPage = pathname === '/';
 
-  if (isLandingPage) {
+  if (isLandingPage || isAuthPage) {
     return <>{children}</>;
   }
 

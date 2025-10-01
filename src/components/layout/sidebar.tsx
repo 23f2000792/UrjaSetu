@@ -62,7 +62,7 @@ const adminNavItems = [
     { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
 ]
 
-const isAuthenticated = true; // Mock authentication state
+const isAuthenticated = false; // Mock authentication state
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -74,7 +74,7 @@ export function AppSidebar() {
     return pathname.startsWith(href) && href !== '/';
   };
   
-  const isLandingPage = pathname === '/';
+  const isLandingPage = pathname === '/' || pathname === '/login' || pathname === '/signup';
   
   if (isLandingPage) {
     return null;
@@ -212,7 +212,7 @@ export function AppSidebar() {
         ) : (
           <div className="p-2 group-data-[collapsible=icon]:hidden">
              <SidebarSeparator />
-            <Link href="/profile">
+            <Link href="/login">
               <Button className="w-full">
                 <LogIn className="mr-2 h-4 w-4" />
                 Login
