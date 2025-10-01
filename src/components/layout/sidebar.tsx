@@ -23,6 +23,8 @@ import {
   Sun,
   User,
   LogOut,
+  Gift,
+  Code,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +42,8 @@ const navItems = [
   { href: '/portfolio', icon: Wallet, label: 'Portfolio' },
   { href: '/insights', icon: Lightbulb, label: 'Insights' },
   { href: '/staking', icon: Coins, label: 'Staking' },
+  { href: '/rewards', icon: Gift, label: 'Rewards' },
+  { href: '/api', icon: Code, label: 'API' },
 ];
 
 export function AppSidebar() {
@@ -64,19 +68,16 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isNavItemActive(item.href)}
-                    tooltip={item.label}
-                    className="justify-start"
-                  >
-                    <span>
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
+              <Link href={item.href} passHref>
+                <SidebarMenuButton
+                  isActive={isNavItemActive(item.href)}
+                  tooltip={item.label}
+                  className="justify-start"
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
