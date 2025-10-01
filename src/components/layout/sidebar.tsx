@@ -32,7 +32,7 @@ import {
   Zap,
   User,
   LogOut,
-  Gift,
+  Trophy,
   Bell,
   FileText,
   Shield,
@@ -57,7 +57,7 @@ const userNavItems = [
   { href: '/portfolio', icon: Wallet, label: 'Portfolio' },
   { href: '/insights', icon: Lightbulb, label: 'AI Insights' },
   { href: '/staking', icon: Coins, label: 'Staking' },
-  { href: '/rewards', icon: Gift, label: 'Rewards' },
+  { href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { href: '/reporting', icon: AreaChart, label: 'Reporting' },
   { href: '/disputes', icon: Gavel, label: 'Disputes' },
 ];
