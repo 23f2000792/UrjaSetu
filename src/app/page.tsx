@@ -8,31 +8,58 @@ import Image from "next/image";
 import Link from "next/link";
 import AssetCard from "@/components/marketplace/asset-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, limit, onSnapshot, query } from "firebase/firestore";
 import type { SolarProject } from "@/lib/mock-data";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LandingPage() {
     const heroImage = PlaceHolderImages.find(p => p.id === 'hero-main')?.imageUrl || "https://picsum.photos/seed/hero-main/1200/800";
     const featuresImage = PlaceHolderImages.find(p => p.id === 'features')?.imageUrl || "https://picsum.photos/seed/features/1200/900";
     
-    const [projects, setProjects] = useState<SolarProject[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const q = query(collection(db, "projects"), limit(12));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const projectsData: SolarProject[] = [];
-            querySnapshot.forEach((doc) => {
-                projectsData.push({ id: doc.id, ...doc.data() } as SolarProject);
-            });
-            setProjects(projectsData);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+    const placeholderProjects: SolarProject[] = [
+        {
+          id: 'sp1',
+          name: 'Mojave Solar Park',
+          location: 'California, USA',
+          capacity: 5000,
+          tokenPrice: 85,
+          expectedYield: 8.5,
+          imageUrl: PlaceHolderImages.find(p => p.id === 'sp1')?.imageUrl || '',
+          imageHint: 'solar panels',
+          description: '', operator: '', panelType: '', totalTokens: 0, tokensAvailable: 0, ownerId: ''
+        },
+        {
+          id: 'sp2',
+          name: 'Thar Desert Array',
+          location: 'Rajasthan, India',
+          capacity: 2245,
+          tokenPrice: 75,
+          expectedYield: 9.2,
+          imageUrl: PlaceHolderImages.find(p => p.id === 'sp2')?.imageUrl || '',
+          imageHint: 'desert solar',
+          description: '', operator: '', panelType: '', totalTokens: 0, tokensAvailable: 0, ownerId: ''
+        },
+        {
+          id: 'sp3',
+          name: 'Rooftop Revolution',
+          location: 'Berlin, Germany',
+          capacity: 800,
+          tokenPrice: 95,
+          expectedYield: 7.8,
+          imageUrl: PlaceHolderImages.find(p => p.id === 'sp3')?.imageUrl || '',
+          imageHint: 'rooftop solar',
+          description: '', operator: '', panelType: '', totalTokens: 0, tokensAvailable: 0, ownerId: ''
+        },
+        {
+          id: 'sp4',
+          name: 'Sunshine Valley',
+          location: 'Queensland, Australia',
+          capacity: 1500,
+          tokenPrice: 80,
+          expectedYield: 9.0,
+          imageUrl: PlaceHolderImages.find(p => p.id === 'sp4')?.imageUrl || '',
+          imageHint: 'solar farm',
+          description: '', operator: '', panelType: '', totalTokens: 0, tokensAvailable: 0, ownerId: ''
+        }
+    ];
 
 
   return (
@@ -208,21 +235,9 @@ export default function LandingPage() {
                     </p>
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {loading ? (
-                        Array.from({length: 12}).map((_, i) => <Skeleton key={i} className="h-96" />)
-                    ) : (
-                        projects.map((project) => (
-                            <AssetCard key={project.id} project={project} />
-                        ))
-                    )}
-                </div>
-                <div className="text-center mt-12">
-                    <Button asChild size="lg">
-                        <Link href="/marketplace">
-                            Explore Marketplace
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                    </Button>
+                    {placeholderProjects.map((project) => (
+                        <AssetCard key={project.id} project={project} />
+                    ))}
                 </div>
             </div>
         </section>
@@ -290,3 +305,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
