@@ -1,4 +1,7 @@
 
+"use client";
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, Zap, Leaf, ShieldAlert } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
@@ -6,10 +9,21 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { AdminStats } from "@/components/admin/admin-stats";
 
 export default function DashboardPage() {
-  const isAdmin = false; // Mock admin state - defaulting to user view
+  const [role, setRole] = useState<string | null>(null);
 
-  if (isAdmin) {
-    return <AdminDashboard />
+  useEffect(() => {
+    // We'll use localStorage to persist the role selection for this simulation
+    const userRole = localStorage.getItem('userRole');
+    setRole(userRole);
+  }, []);
+
+  if (role === null) {
+    // You can add a loading spinner here
+    return <div>Loading dashboard...</div>;
+  }
+
+  if (role === 'seller') {
+    return <AdminDashboard />;
   }
 
   return <UserDashboard />;
@@ -79,7 +93,7 @@ function UserDashboard() {
 function AdminDashboard() {
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-primary">Admin Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-primary">Seller Dashboard</h1>
 
       <AdminStats />
 

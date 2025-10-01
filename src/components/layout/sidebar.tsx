@@ -43,12 +43,12 @@ import {
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
+import { signOut as firebaseSignOut } from 'firebase/auth'; // Renamed to avoid conflict
 import { auth } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
 
 
-const navItems = [
+const userNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/marketplace', icon: Store, label: 'Marketplace' },
   { href: '/portfolio', icon: Wallet, label: 'Portfolio' },
@@ -56,38 +56,47 @@ const navItems = [
   { href: '/staking', icon: Coins, label: 'Staking' },
   { href: '/rewards', icon: Gift, label: 'Rewards' },
   { href: '/reporting', icon: AreaChart, label: 'Reporting' },
-  { href: '/documents', icon: FileText, label: 'Documents' },
   { href: '/disputes', icon: Gavel, label: 'Disputes' },
   { href: '/api', icon: Code, label: 'API' },
 ];
 
-const adminNavItems = [
+const sellerNavItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/admin/documents', icon: Shield, label: 'Document Review' },
     { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
-]
+    { href: '/documents', icon: FileText, label: 'My Documents' },
+];
+
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null); // Replace 'any' with your user type
-  const [isAdmin, setIsAdmin] = useState(false); // Mock admin state
+  const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
-      // In a real app, you'd check for an admin role from Firestore or custom claims
-      // For this mock, we'll just keep it simple.
-      // e.g. setIsAdmin(user.claims.admin === true)
+      if (!user) {
+        // Clear role on logout
+        localStorage.removeItem('userRole');
+        setRole(null);
+      } else {
+        // Get role from localStorage on login
+        const userRole = localStorage.getItem('userRole');
+        setRole(userRole);
+      }
     });
     return () => unsubscribe();
   }, []);
 
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
-
+  
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await firebaseSignOut(auth);
+      localStorage.removeItem('userRole');
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
@@ -102,17 +111,12 @@ export function AppSidebar() {
     }
   };
 
-
   const isNavItemActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href) && href !== '/';
   };
   
-  const isLandingPage = pathname === '/' || pathname === '/login' || pathname === '/signup';
-  
-  if (isLandingPage) {
-    return null;
-  }
+  const navItems = role === 'seller' ? sellerNavItems : userNavItems;
 
   return (
     <>
@@ -141,30 +145,6 @@ export function AppSidebar() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-        
-        {isAdmin && (
-            <>
-                <SidebarSeparator />
-                <SidebarMenu>
-                    <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
-                    {adminNavItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                    <Link href={item.href}>
-                        <SidebarMenuButton
-                        isActive={isNavItemActive(item.href)}
-                        tooltip={item.label}
-                        className="justify-start"
-                        >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                        </SidebarMenuButton>
-                    </Link>
-                    </SidebarMenuItem>
-                ))}
-                </SidebarMenu>
-            </>
-        )}
-
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">
@@ -183,7 +163,7 @@ export function AppSidebar() {
                           <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium">User</span>
+                          <span className="text-sm font-medium">{role === 'seller' ? 'Seller' : 'Buyer'}</span>
                           <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>
