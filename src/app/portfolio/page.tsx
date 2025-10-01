@@ -28,10 +28,12 @@ export default function PortfolioPage() {
     useEffect(() => {
         if (!user) {
             setLoading(false);
+            setPortfolioAssets([]);
             return;
         }
 
         setLoading(true);
+        // The id of portfolio assets is `userId_assetId`
         const q = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const assets: PortfolioAsset[] = [];
@@ -71,12 +73,13 @@ export default function PortfolioPage() {
         document.body.removeChild(link);
     }
 
-    const getAssetId = (assetId: string, type: 'Project' | 'Credit') => {
+    const getAssetMarketplaceId = (assetId: string, type: 'Project' | 'Credit') => {
+        // The portfolio asset ID is `userId_assetId`, so we extract the original assetId.
+        const originalAssetId = assetId.split('_').pop();
         if (type === 'Credit') {
-            // The mock ID for credits is `ec` + number, we need `credit-ec` + number for URL
-            return `credit-${assetId}`;
+            return `credit-${originalAssetId}`;
         }
-        return assetId;
+        return originalAssetId;
     }
 
   return (
@@ -136,10 +139,10 @@ export default function PortfolioPage() {
                     <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}`}>Details</Link>
+                                <Link href={`/portfolio/${getAssetMarketplaceId(asset.id, asset.type)}`}>Details</Link>
                             </Button>
                             <Button variant="default" size="sm" asChild>
-                               <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}/sell`}>Sell</Link>
+                               <Link href={`/portfolio/${getAssetMarketplaceId(asset.id, asset.type)}/sell`}>Sell</Link>
                             </Button>
                         </div>
                     </TableCell>

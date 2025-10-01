@@ -8,29 +8,39 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Zap, TrendingUp, PieChart, Wallet, ShoppingCart, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
+import type { User } from 'firebase/auth';
 
 export default function PortfolioAssetDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const id = params.id as string;
+    const id = params.id as string; // This is the marketplace ID
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
     const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const isCredit = id.startsWith('credit-');
-    const assetId = isCredit ? id.replace('credit-', '') : id;
+    const assetId = isCredit ? id.replace('credit-', '') : id; // This is the raw asset ID (e.g., sp1)
     
     useEffect(() => {
-        if (!assetId) return;
+        if (!assetId || !user) return;
 
         const fetchAssets = async () => {
             setLoading(true);
             
-            // Fetch portfolio asset
-            const portfolioDocRef = doc(db, "portfolioAssets", assetId);
+            // Fetch portfolio asset using composite ID
+            const portfolioAssetId = `${user.uid}_${assetId}`;
+            const portfolioDocRef = doc(db, "portfolioAssets", portfolioAssetId);
             const portfolioDocSnap = await getDoc(portfolioDocRef);
             if (portfolioDocSnap.exists()) {
                 setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
@@ -48,7 +58,7 @@ export default function PortfolioAssetDetailPage() {
         };
 
         fetchAssets();
-    }, [assetId, isCredit]);
+    }, [assetId, isCredit, user]);
 
     if (loading) {
         return <div>Loading asset details...</div>;
@@ -123,7 +133,7 @@ export default function PortfolioAssetDetailPage() {
                                     width={150}
                                     height={100}
                                     className="rounded-lg object-cover"
-                                    data-ai-hint={marketAsset.imageHint}
+                                    data-ai-hint={(marketAsset as any).imageHint}
                                 />
                                 <div>
                                     <h3 className="font-bold">{name}</h3>

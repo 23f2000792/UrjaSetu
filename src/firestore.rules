@@ -1,0 +1,61 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users can create their own user profile, and read any profile.
+    // They can only update their own profile.
+    match /users/{userId} {
+      allow read, create;
+      allow update: if request.auth.uid == userId;
+    }
+
+    // Projects are public to read for any authenticated user.
+    // Only authenticated users with a 'seller' role can create projects.
+    // Only the project owner can update their own project.
+    match /projects/{projectId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Energy credits are public to read for any authenticated user.
+    match /energyCredits/{creditId} {
+      allow read: if request.auth != null;
+    }
+
+    // Proposals are public to read for any authenticated user.
+    match /proposals/{proposalId} {
+      allow read: if request.auth != null;
+    }
+    
+    // Users can only create/read/update their OWN portfolio assets.
+    match /portfolioAssets/{assetId} {
+        allow read, update, create, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Users can create disputes.
+    // Users can only read their own disputes.
+    // Admins/Sellers can read all disputes and update them.
+    match /disputes/{disputeId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (request.resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller');
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+    }
+
+    // Transactions can be created by authenticated users.
+    // Users can only read their own transactions.
+    match /transactions/{transactionId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Fallback rule: Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+    

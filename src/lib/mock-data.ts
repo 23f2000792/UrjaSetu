@@ -1,6 +1,7 @@
 
 
 
+
 import { PlaceHolderImages } from './placeholder-images';
 
 export type SolarProject = {
@@ -142,12 +143,13 @@ export type PortfolioAsset = {
   quantity: number;
   purchasePrice: number; // in INR
   currentValue: number; // in INR
+  userId: string;
 };
 
 export const portfolioAssets: PortfolioAsset[] = [
-    { id: 'sp1', name: 'Mojave Solar Park', type: 'Project', quantity: 500, purchasePrice: 95, currentValue: 100 },
-    { id: 'ec2', name: 'Thar Desert Array ECT', type: 'Credit', quantity: 2500, purchasePrice: 9, currentValue: 10 },
-    { id: 'sp3', name: 'Rooftop Revolution', type: 'Project', quantity: 100, purchasePrice: 125, currentValue: 125 },
+    { id: 'sp1', name: 'Mojave Solar Park', type: 'Project', quantity: 500, purchasePrice: 95, currentValue: 100, userId: 'dummy' },
+    { id: 'ec2', name: 'Thar Desert Array ECT', type: 'Credit', quantity: 2500, purchasePrice: 9, currentValue: 10, userId: 'dummy' },
+    { id: 'sp3', name: 'Rooftop Revolution', type: 'Project', quantity: 100, purchasePrice: 125, currentValue: 125, userId: 'dummy' },
 ];
 
 export type GovernanceProposal = {
@@ -193,5 +195,7 @@ export const proposals: GovernanceProposal[] = [
     endDate: '2024-06-20',
   },
 ];
+
+    
 
     
