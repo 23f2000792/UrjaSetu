@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, Zap } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,55 +44,71 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <LogIn /> Login
-          </CardTitle>
-          <CardDescription>
-            Welcome back to UrjaSetu. Please enter your credentials.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleLogin}>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="animate-spin" /> : "Login"}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/signup" className="underline hover:text-primary">
-                Sign up
-              </Link>
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+            <Link href="/" className="flex items-center justify-center gap-2 mb-4">
+            <Zap className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold text-primary">UrjaSetu</span>
+            </Link>
+            <h1 className="text-2xl font-bold">Welcome Back</h1>
+            <p className="text-muted-foreground">
+                Please enter your credentials to access your account.
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+        </div>
+        <Card>
+            <CardHeader>
+            <CardTitle className="text-lg">Login</CardTitle>
+            </CardHeader>
+            <form onSubmit={handleLogin}>
+            <CardContent className="grid gap-4">
+                <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                />
+                </div>
+                <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link
+                        href="#"
+                        className="text-sm underline"
+                    >
+                        Forgot password?
+                    </Link>
+                </div>
+                <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                />
+                </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : "Login"}
+                </Button>
+                
+            </CardFooter>
+            </form>
+        </Card>
+        <p className="text-center text-sm text-muted-foreground mt-6">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="underline hover:text-primary">
+            Sign up
+            </Link>
+        </p>
+      </div>
     </div>
   );
 }
