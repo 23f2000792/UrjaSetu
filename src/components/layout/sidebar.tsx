@@ -39,7 +39,6 @@ import {
   LogIn,
   Gavel,
   AreaChart,
-  Code,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
@@ -63,13 +62,12 @@ const userNavItems = [
 
 const sellerNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/admin/documents', icon: Shield, label: 'Document Review' },
-    { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
+    { href: '/seller/documents', icon: Shield, label: 'Document Review' },
+    { href: '/seller/disputes', icon: Gavel, label: 'Dispute Management' },
     { href: '/documents', icon: FileText, label: 'My Documents' },
 ];
 
 const sharedBottomNavItems = [
-  { href: '/api', icon: Code, label: 'Developer API' },
 ];
 
 
@@ -142,7 +140,8 @@ export function AppSidebar() {
 
   const isNavItemActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(href) && href !== '/';
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
   };
   
   const navItems = role === 'seller' ? sellerNavItems : userNavItems;

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Zap, Leaf, ShieldAlert } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
-import { AdminStats } from "@/components/admin/admin-stats";
+import { SellerStats } from "@/components/seller/seller-stats";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -52,7 +52,7 @@ export default function DashboardPage() {
   }
 
   if (role === 'seller') {
-    return <AdminDashboard />;
+    return <SellerDashboard />;
   }
   
   // Default to UserDashboard if role is 'buyer' or not set (for fallback)
@@ -120,12 +120,12 @@ function UserDashboard() {
   );
 }
 
-function AdminDashboard() {
+function SellerDashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">Seller Dashboard</h1>
 
-      <AdminStats />
+      <SellerStats />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <Card className="lg:col-span-3">
