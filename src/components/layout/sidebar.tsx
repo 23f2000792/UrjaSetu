@@ -10,9 +10,18 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   Store,
@@ -27,16 +36,10 @@ import {
   Code,
   Bell,
   LogIn,
+  FileText,
+  Shield,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -45,8 +48,13 @@ const navItems = [
   { href: '/insights', icon: Lightbulb, label: 'Insights' },
   { href: '/staking', icon: Coins, label: 'Staking' },
   { href: '/rewards', icon: Gift, label: 'Rewards' },
+  { href: '/documents', icon: FileText, label: 'Documents' },
   { href: '/api', icon: Code, label: 'API' },
 ];
+
+const adminNavItems = [
+    { href: '/admin/documents', icon: Shield, label: 'Document Review' }
+]
 
 const isAuthenticated = false; // Mock authentication state
 
@@ -72,19 +80,46 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton
+                  asChild
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
                 >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  <>
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
+        
+        <SidebarSeparator />
+        
+        <SidebarMenu>
+            <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
+             {adminNavItems.map((item) => (
+            <SidebarMenuItem key={item.label}>
+              <Link href={item.href} passHref>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isNavItemActive(item.href)}
+                  tooltip={item.label}
+                  className="justify-start"
+                >
+                  <>
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  </>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">
@@ -97,7 +132,7 @@ export function AppSidebar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="w-full justify-start gap-2 p-2 h-auto">
-                       <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
                           <AvatarFallback>U</AvatarFallback>
@@ -168,7 +203,7 @@ export function AppSidebar() {
           </>
         ) : (
           <div className="p-2 group-data-[collapsible=icon]:hidden">
-             <Separator className="my-2" />
+             <SidebarSeparator />
             <Link href="/profile" passHref>
               <Button className="w-full">
                 <LogIn className="mr-2 h-4 w-4" />
