@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, ShieldCheck, Landmark, QrCode, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, ShieldCheck, Landmark, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -23,8 +23,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, runTransaction, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
+import { doc, getDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit, PortfolioAsset, Transaction } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
 export default function TradePage() {
@@ -84,6 +84,7 @@ export default function TradePage() {
             const projectRef = doc(db, collectionName, assetId);
             const portfolioAssetId = `${user.uid}_${assetId}`;
             const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
+            const newTransactionRef = doc(collection(db, "transactions"));
             
             await runTransaction(db, async (transaction) => {
                 const projectDoc = await transaction.get(projectRef);
@@ -93,41 +94,44 @@ export default function TradePage() {
                     throw "Project does not exist!";
                 }
 
-                const currentProjectData = projectDoc.data() as SolarProject;
-                const newTokensAvailable = currentProjectData.tokensAvailable - quantity;
+                const currentProjectData = projectDoc.data() as SolarProject; // Assuming project for tokens
+                const price = (asset as any).tokenPrice || (asset as any).price;
+                const available = currentProjectData.tokensAvailable;
 
-                if (newTokensAvailable < 0) {
+                if (quantity > available) {
                     throw "Not enough tokens available for this purchase.";
                 }
+
+                const newTokensAvailable = available - quantity;
 
                 // 1. Update project token count
                 transaction.update(projectRef, { tokensAvailable: newTokensAvailable });
 
                 // 2. Create a new transaction record
-                const newTransactionRef = doc(collection(db, "transactions"));
-                transaction.set(newTransactionRef, {
+                const transactionData: Omit<Transaction, 'id'> = {
                     userId: user.uid,
                     projectId: assetId,
                     projectName: (asset as any).name || (asset as any).projectName,
                     quantity: quantity,
-                    pricePerUnit: (asset as any).tokenPrice || (asset as any).price,
-                    totalCost: quantity * ((asset as any).tokenPrice || (asset as any).price),
+                    pricePerUnit: price,
+                    totalCost: quantity * price,
                     type: 'Buy',
                     status: 'Completed',
-                    timestamp: serverTimestamp()
-                });
+                    timestamp: serverTimestamp() as any
+                };
+                transaction.set(newTransactionRef, transactionData);
 
                 // 3. Create or update portfolio asset
                 if (portfolioDoc.exists()) {
                     // Portfolio asset exists, update it
                     const currentPortfolioAsset = portfolioDoc.data() as PortfolioAsset;
                     const newQuantity = currentPortfolioAsset.quantity + quantity;
-                    const newTotalCost = (currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity) + (quantity * ((asset as any).tokenPrice || (asset as any).price));
+                    const newTotalCost = (currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity) + (quantity * price);
                     const newAvgPrice = newTotalCost / newQuantity;
                     transaction.update(portfolioAssetRef, {
                         quantity: newQuantity,
                         purchasePrice: newAvgPrice,
-                        currentValue: (asset as any).tokenPrice || (asset as any).price,
+                        currentValue: price,
                     });
                 } else {
                     // Portfolio asset does not exist, create it
@@ -136,8 +140,8 @@ export default function TradePage() {
                         name: (asset as any).name || (asset as any).projectName,
                         type: isCredit ? 'Credit' : 'Project',
                         quantity: quantity,
-                        purchasePrice: (asset as any).tokenPrice || (asset as any).price,
-                        currentValue: (asset as any).tokenPrice || (asset as any).price,
+                        purchasePrice: price,
+                        currentValue: price,
                         userId: user.uid,
                     };
                     transaction.set(portfolioAssetRef, newPortfolioAsset);
@@ -225,10 +229,9 @@ export default function TradePage() {
                     </div>
                     <div className="p-6">
                         <Tabs defaultValue="card" className="w-full">
-                             <TabsList className="grid w-full grid-cols-3 mb-6">
+                             <TabsList className="grid w-full grid-cols-2 mb-6">
                                 <TabsTrigger value="card" disabled={isPurchasing}><CreditCard className="mr-2 h-4 w-4"/>Card</TabsTrigger>
                                 <TabsTrigger value="netbanking" disabled={isPurchasing}><Landmark className="mr-2 h-4 w-4"/>Net Banking</TabsTrigger>
-                                <TabsTrigger value="upi" disabled={isPurchasing}><QrCode className="mr-2 h-4 w-4"/>UPI</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="card">
@@ -278,17 +281,6 @@ export default function TradePage() {
                                 </CardContent>
                             </TabsContent>
 
-                            <TabsContent value="upi">
-                                <CardHeader className="p-0">
-                                    <CardTitle className="flex items-center gap-2 text-base">UPI Payment</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 pt-6 space-y-4">
-                                    <div>
-                                        <Label htmlFor="upi-id">UPI ID</Label>
-                                        <Input id="upi-id" placeholder="yourname@bank" disabled={isPurchasing}/>
-                                    </div>
-                                </CardContent>
-                            </TabsContent>
                         </Tabs>
 
                          <CardFooter className="flex-col items-stretch p-0 pt-6 gap-4">
@@ -329,3 +321,5 @@ export default function TradePage() {
         </div>
     );
 }
+
+    
