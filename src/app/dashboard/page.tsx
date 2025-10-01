@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Zap, Leaf, ShieldAlert, DollarSign, ListTree, Sun } from "lucide-react";
+import { Zap, Leaf, DollarSign, ListTree, Sun } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
@@ -196,8 +196,7 @@ function SellerDashboard({ user }: { user: User | null }) {
         const tokensSold = p.totalTokens - p.tokensAvailable;
         return acc + (tokensSold * p.tokenPrice);
     }, 0);
-    const activeProjectsCount = projects.length;
-    const pendingProjectsCount = projects.filter(p => (p as any).status === 'Pending').length;
+    const activeProjectsCount = projects.filter(p => (p as any).status === 'Verified').length;
     const energySold = projects.reduce((acc, p) => acc + (p.totalTokens - p.tokensAvailable) * 120, 0); // Assuming 1 token = 120kWh
     const totalCapacity = projects.reduce((acc, p) => acc + p.capacity, 0);
 
@@ -213,7 +212,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                 </CardHeader>
                 <CardContent>
                      {loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">Rs. {totalRevenue.toLocaleString('en-IN')}</div>}
-                    <p className="text-xs text-muted-foreground">+18.2% this month</p>
+                    <p className="text-xs text-muted-foreground">from token sales</p>
                 </CardContent>
             </Card>
             <Card>
@@ -223,7 +222,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                 </CardHeader>
                 <CardContent>
                     {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{activeProjectsCount}</div>}
-                     <p className="text-xs text-muted-foreground">{pendingProjectsCount} pending verification</p>
+                     <p className="text-xs text-muted-foreground">Verified & listed projects</p>
                 </CardContent>
             </Card>
             <Card>
@@ -233,7 +232,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                 </CardHeader>
                 <CardContent>
                     {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{energySold.toLocaleString()} kWh</div>}
-                    <p className="text-xs text-muted-foreground">in the last 30 days</p>
+                    <p className="text-xs text-muted-foreground">based on tokens sold</p>
                 </CardContent>
             </Card>
             <Card>
@@ -271,5 +270,3 @@ function SellerDashboard({ user }: { user: User | null }) {
     </div>
   );
 }
-
-    

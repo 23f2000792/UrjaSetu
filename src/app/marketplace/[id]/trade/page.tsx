@@ -87,7 +87,8 @@ export default function TradePage() {
 
         try {
             const projectRef = doc(db, collectionName, assetId);
-            const portfolioAssetRef = doc(db, "portfolioAssets", `${user.uid}_${assetId}`);
+            const portfolioAssetId = `${user.uid}_${asset.id}`;
+            const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
 
             await runTransaction(db, async (transaction) => {
                 const projectDoc = await transaction.get(projectRef);
@@ -108,7 +109,7 @@ export default function TradePage() {
                 // 2. Create a transaction record
                 const transactionData = {
                     userId: user.uid,
-                    projectId: assetId,
+                    projectId: asset.id,
                     projectName: name,
                     quantity: quantity,
                     pricePerUnit: price,
@@ -126,18 +127,18 @@ export default function TradePage() {
                     // Update existing asset
                     const currentPortfolioAsset = portfolioDoc.data() as PortfolioAsset;
                     const newQuantity = currentPortfolioAsset.quantity + quantity;
-                    const newTotalValue = currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity + totalCost;
-                    const newAvgPrice = newTotalValue / newQuantity;
+                    const newTotalCost = (currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity) + totalCost;
+                    const newAvgPrice = newTotalCost / newQuantity;
 
                     transaction.update(portfolioAssetRef, {
                         quantity: newQuantity,
                         purchasePrice: newAvgPrice,
-                        currentValue: price,
+                        currentValue: price, // Update current value to latest price
                     });
                 } else {
                     // Create new asset
                     const newPortfolioAsset: PortfolioAsset = {
-                        id: assetId,
+                        id: asset.id,
                         name: name,
                         type: isCredit ? 'Credit' : 'Project',
                         quantity: quantity,
@@ -359,5 +360,3 @@ export default function TradePage() {
         </div>
     );
 }
-
-    
