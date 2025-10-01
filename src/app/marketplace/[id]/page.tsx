@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { useParams } from 'next/navigation';
@@ -169,20 +168,6 @@ export default function AssetDetailPage() {
                     <Button size="lg" className="w-full" asChild>
                         <Link href={`/marketplace/${id}/trade`}>Buy Now</Link>
                     </Button>
-
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="text-xl flex items-center gap-2"><FileText /> Documents</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                           <Button variant="outline" className="w-full justify-start gap-2">
-                                <Download className="h-4 w-4" /> Project Prospectus.pdf
-                           </Button>
-                           <Button variant="outline" className="w-full justify-start gap-2">
-                                <Download className="h-4 w-4" /> Energy_Certification.pdf
-                           </Button>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
         </div>

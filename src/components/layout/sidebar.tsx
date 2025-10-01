@@ -64,7 +64,6 @@ const userNavItems = [
 const sellerNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/seller/projects', icon: Briefcase, label: 'My Projects' },
-    { href: '/seller/documents', icon: FileText, label: 'My Documents' },
     { href: '/seller/disputes', icon: Gavel, label: 'Dispute Management' },
 ];
 
