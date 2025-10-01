@@ -6,23 +6,36 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { LogIn, User, ShieldCheck, Mail, Edit } from "lucide-react";
 import Link from "next/link";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
 
+type UserProfile = {
+  fullName: string;
+  role: string;
+};
+
 export default function ProfilePage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userRole = localStorage.getItem('userRole');
-        setRole(userRole);
+        setUser(user);
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setProfile(docSnap.data() as UserProfile);
+        }
+      } else {
+        setUser(null);
+        setProfile(null);
       }
       setIsLoading(false);
     });
@@ -39,7 +52,7 @@ export default function ProfilePage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">User Profile</h1>
       
-      {user ? (
+      {user && profile ? (
         <div className="grid gap-8 md:grid-cols-3">
           <div className="md:col-span-1 space-y-6">
             <Card>
@@ -48,9 +61,9 @@ export default function ProfilePage() {
                       <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
                       <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                   </Avatar>
-                  <h2 className="text-2xl font-bold">{user.displayName || "User Name"}</h2>
+                  <h2 className="text-2xl font-bold">{profile.fullName}</h2>
                   <p className="text-muted-foreground">{user.email}</p>
-                  <Badge className="mt-2 capitalize">{role}</Badge>
+                  <Badge className="mt-2 capitalize">{profile.role}</Badge>
               </CardContent>
             </Card>
             <Card>
@@ -72,7 +85,7 @@ export default function ProfilePage() {
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-3 items-center">
                         <span className="font-medium text-muted-foreground">Full Name</span>
-                        <span className="col-span-2">{user.displayName || "John Doe"}</span>
+                        <span className="col-span-2">{profile.fullName}</span>
                     </div>
                      <div className="grid grid-cols-3 items-center">
                         <span className="font-medium text-muted-foreground">Email Address</span>
@@ -80,7 +93,7 @@ export default function ProfilePage() {
                     </div>
                      <div className="grid grid-cols-3 items-center">
                         <span className="font-medium text-muted-foreground">Role</span>
-                        <span className="col-span-2 capitalize">{role}</span>
+                        <span className="col-span-2 capitalize">{profile.role}</span>
                     </div>
                      <div className="grid grid-cols-3 items-center">
                         <span className="font-medium text-muted-foreground">Wallet Address</span>

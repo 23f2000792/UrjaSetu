@@ -44,7 +44,8 @@ import {
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'; 
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from "firebase/firestore";
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 
@@ -78,14 +79,26 @@ export function AppSidebar() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsLoading(true);
       if (user) {
-        const userRole = localStorage.getItem('userRole');
-        setRole(userRole);
+        setUser(user);
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const userRole = docSnap.data().role;
+          setRole(userRole);
+          localStorage.setItem('userRole', userRole); // Keep localStorage for non-reactive parts
+        } else {
+          // Handle case where user exists in Auth but not in Firestore
+          console.log("User document not found in Firestore.");
+          setRole(null);
+          localStorage.removeItem('userRole');
+        }
       } else {
-        localStorage.removeItem('userRole');
+        setUser(null);
         setRole(null);
+        localStorage.removeItem('userRole');
       }
       setIsLoading(false);
     });
@@ -120,7 +133,18 @@ export function AppSidebar() {
   const navItems = role === 'seller' ? sellerNavItems : userNavItems;
 
   if (isLoading) {
-    return null; // or a loading skeleton
+    return (
+        <>
+            <SidebarHeader>
+                 <Link href="/" className="flex items-center gap-2 w-full p-2">
+                    <Zap className="w-8 h-8 flex-shrink-0 text-primary" />
+                </Link>
+            </SidebarHeader>
+            <SidebarContent>
+                {/* You can add a skeleton loader here */}
+            </SidebarContent>
+        </>
+    );
   }
 
   return (
@@ -135,7 +159,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => (
+          {user && navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -246,5 +270,3 @@ export function AppSidebar() {
     </>
   );
 }
-
-    

@@ -5,7 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { setDoc, doc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,14 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!role) {
+        toast({
+            title: "Role not selected",
+            description: "Please select whether you are a Buyer or a Seller.",
+            variant: "destructive",
+        });
+        return;
+    }
     if (!agreedToTerms) {
         toast({
             title: "Terms and Conditions",
@@ -38,8 +47,19 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Here you would typically also save the user's role and full name to Firestore
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Save user role and full name to Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        fullName: fullName,
+        email: email,
+        role: role,
+      });
+
+      // Also set role in local storage for immediate use in this session
+      localStorage.setItem('userRole', role);
+
       toast({
         title: "Account Created",
         description: "Welcome to UrjaSetu! You are now logged in.",
@@ -135,7 +155,7 @@ export default function SignupPage() {
                     </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
-                    <Button type="submit" className="w-full" disabled={isLoading || !agreedToTerms}>
+                    <Button type="submit" className="w-full" disabled={isLoading || !agreedToTerms || !role}>
                     {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
                     </Button>
                 </CardFooter>

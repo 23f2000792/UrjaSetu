@@ -7,21 +7,44 @@ import { Zap, Leaf, ShieldAlert } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import { AdminStats } from "@/components/admin/admin-stats";
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
 
 export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // We'll use localStorage to persist the role selection for this simulation
-    const userRole = localStorage.getItem('userRole');
-    setRole(userRole);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setRole(docSnap.data().role);
+        } else {
+          // Fallback or error handling
+          console.log("No such user document!");
+          // for simulation, we can fallback to localstorage
+          const localRole = localStorage.getItem('userRole');
+          if (localRole) {
+            setRole(localRole);
+          }
+        }
+      } else {
+        // User is signed out
+        setRole(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  if (role === null) {
-    // You can add a loading spinner here
+  if (loading) {
     return <div>Loading dashboard...</div>;
   }
 
@@ -33,7 +56,8 @@ export default function DashboardPage() {
     return <UserDashboard />;
   }
 
-  return <div>Loading dashboard...</div>;
+  // Fallback for when role is not set or page is loading
+  return <UserDashboard />;
 }
 
 
