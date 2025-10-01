@@ -1,9 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Zap, Leaf } from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DollarSign, Zap, Leaf, Users, Activity, ShieldAlert } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
+import { AdminStats } from "@/components/admin/admin-stats";
 
 export default function DashboardPage() {
+  const isAdmin = true; // Mock admin state
+
+  if (isAdmin) {
+    return <AdminDashboard />
+  }
+
+  return <UserDashboard />;
+}
+
+
+function UserDashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
@@ -59,6 +72,72 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function AdminDashboard() {
+  return (
+    <div className="space-y-8">
+      <h1 className="text-3xl font-bold tracking-tight text-primary">Admin Dashboard</h1>
+
+      <AdminStats />
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Marketplace Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Placeholder for a more detailed admin-specific chart */}
+            <PortfolioChart />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Recent Platform Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+             {/* Placeholder for admin-specific activity feed */}
+            <RecentActivity />
+          </CardContent>
+        </Card>
+      </div>
+       <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ShieldAlert />Monitoring</CardTitle>
+            <CardDescription>Key areas for administrative oversight.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="text-lg">Pending KYC</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="text-3xl font-bold">5</p>
+                      <p className="text-sm text-muted-foreground">verifications to review</p>
+                  </CardContent>
+              </Card>
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="text-lg">Open Disputes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="text-3xl font-bold">2</p>
+                      <p className="text-sm text-muted-foreground">cases require attention</p>
+                  </CardContent>
+              </Card>
+               <Card>
+                  <CardHeader>
+                      <CardTitle className="text-lg">Suspicious Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="text-3xl font-bold">1</p>
+                      <p className="text-sm text-muted-foreground">flagged transaction</p>
+                  </CardContent>
+              </Card>
+          </CardContent>
+        </Card>
     </div>
   );
 }

@@ -2,13 +2,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { solarProjects, energyCredits } from "@/lib/mock-data";
 import AssetCard from "@/components/marketplace/asset-card";
 import ECTCard from "@/components/marketplace/ect-card";
+import { MarketplaceFilters } from "@/components/marketplace/marketplace-filters";
 
 export default function MarketplacePage() {
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight text-primary">Marketplace</h1>
-        {/* TODO: Add sorting/filtering controls here */}
+        <MarketplaceFilters />
       </div>
 
       <Tabs defaultValue="projects" className="w-full">

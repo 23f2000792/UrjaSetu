@@ -38,6 +38,7 @@ import {
   FileText,
   Shield,
   LogIn,
+  Gavel,
 } from 'lucide-react';
 
 
@@ -49,11 +50,13 @@ const navItems = [
   { href: '/staking', icon: Coins, label: 'Staking' },
   { href: '/rewards', icon: Gift, label: 'Rewards' },
   { href: '/documents', icon: FileText, label: 'Documents' },
+  { href: '/disputes', icon: Gavel, label: 'Disputes' },
   { href: '/api', icon: Code, label: 'API' },
 ];
 
 const adminNavItems = [
-    { href: '/admin/documents', icon: Shield, label: 'Document Review' }
+    { href: '/admin/documents', icon: Shield, label: 'Document Review' },
+    { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
 ]
 
 const isAuthenticated = false; // Mock authentication state
@@ -80,8 +83,9 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton
+                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -100,8 +104,9 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
              {adminNavItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton
+                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
