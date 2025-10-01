@@ -30,6 +30,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       // In a real app, the role would come from Firestore/claims,
       // but for this simulation, we'll use the selected role.
+      // This is also a fallback for when firestore rules are not set.
       localStorage.setItem('userRole', role);
       
       toast({

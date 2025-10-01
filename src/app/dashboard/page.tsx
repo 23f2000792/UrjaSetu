@@ -9,33 +9,44 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { AdminStats } from "@/components/admin/admin-stats";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
 
 export default function DashboardPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setUser(user);
         const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setRole(docSnap.data().role);
-        } else {
-          // Fallback or error handling
-          console.log("No such user document!");
-          // for simulation, we can fallback to localstorage
-          const localRole = localStorage.getItem('userRole');
-          if (localRole) {
-            setRole(localRole);
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setRole(docSnap.data().role);
+          } else {
+            console.log("No such user document! Falling back to localStorage.");
+            // Fallback for simulation/permission errors
+            const localRole = localStorage.getItem('userRole');
+            if (localRole) {
+              setRole(localRole);
+            }
           }
+        } catch (error) {
+            console.error("Error getting user document:", error);
+            console.log("Falling back to localStorage due to error.");
+            const localRole = localStorage.getItem('userRole');
+            if (localRole) {
+              setRole(localRole);
+            }
         }
       } else {
         // User is signed out
+        setUser(null);
         setRole(null);
       }
       setLoading(false);
@@ -52,11 +63,7 @@ export default function DashboardPage() {
     return <AdminDashboard />;
   }
   
-  if (role === 'buyer') {
-    return <UserDashboard />;
-  }
-
-  // Fallback for when role is not set or page is loading
+  // Default to UserDashboard if role is 'buyer' or not set (for fallback)
   return <UserDashboard />;
 }
 
