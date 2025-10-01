@@ -16,7 +16,7 @@ export default function AboutPage() {
     { name: 'Arjun Das', role: 'Head of Operations', imageId: 'trader3', bio: "Arjun oversees the day-to-day operations of UrjaSetu, from project verification to customer support. He is committed to ensuring a seamless experience for all users." },
   ];
   
-  const heroImage = PlaceHolderImages.find(p => p.id === 'hero-main')?.imageUrl || '';
+  const storyImage = PlaceHolderImages.find(p => p.id === 'about-story')?.imageUrl || '';
 
   return (
     <div className="space-y-16">
@@ -43,7 +43,7 @@ export default function AboutPage() {
                 </p>
             </div>
             <div>
-                <Image src={heroImage} alt="Our Story" width={600} height={400} className="rounded-lg shadow-lg" data-ai-hint="solar panels" />
+                <Image src={storyImage} alt="Our Story" width={600} height={400} className="rounded-lg shadow-lg" data-ai-hint="team collaboration" />
             </div>
         </div>
       </section>
