@@ -79,23 +79,19 @@ export default function TradePage() {
         }
 
         setIsPurchasing(true);
-        toast({
-            title: "Processing Payment...",
-            description: `Attempting to purchase ${quantity} ${isCredit ? 'kWh' : 'Token(s)'} of ${name}.`,
-        });
-
+        
         try {
             const projectRef = doc(db, collectionName, assetId);
-            const portfolioAssetId = `${user.uid}_${asset.id}`;
+            const portfolioAssetId = `${user.uid}_${assetId}`;
             const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
-
+            
             await runTransaction(db, async (transaction) => {
                 const projectDoc = await transaction.get(projectRef);
+                const portfolioDoc = await transaction.get(portfolioAssetRef);
+
                 if (!projectDoc.exists()) {
                     throw "Project does not exist!";
                 }
-
-                const portfolioDoc = await transaction.get(portfolioAssetRef);
 
                 const currentProjectData = projectDoc.data() as SolarProject;
                 const newTokensAvailable = currentProjectData.tokensAvailable - quantity;
@@ -104,13 +100,15 @@ export default function TradePage() {
                     throw "Not enough tokens available for this purchase.";
                 }
 
+                // 1. Update project token count
                 transaction.update(projectRef, { tokensAvailable: newTokensAvailable });
 
+                // 2. Create a new transaction record
                 const newTransactionRef = doc(collection(db, "transactions"));
                 transaction.set(newTransactionRef, {
                     userId: user.uid,
-                    projectId: asset.id,
-                    projectName: (asset as any).name,
+                    projectId: assetId,
+                    projectName: (asset as any).name || (asset as any).projectName,
                     quantity: quantity,
                     pricePerUnit: (asset as any).tokenPrice || (asset as any).price,
                     totalCost: quantity * ((asset as any).tokenPrice || (asset as any).price),
@@ -119,7 +117,9 @@ export default function TradePage() {
                     timestamp: serverTimestamp()
                 });
 
+                // 3. Create or update portfolio asset
                 if (portfolioDoc.exists()) {
+                    // Portfolio asset exists, update it
                     const currentPortfolioAsset = portfolioDoc.data() as PortfolioAsset;
                     const newQuantity = currentPortfolioAsset.quantity + quantity;
                     const newTotalCost = (currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity) + (quantity * ((asset as any).tokenPrice || (asset as any).price));
@@ -130,9 +130,10 @@ export default function TradePage() {
                         currentValue: (asset as any).tokenPrice || (asset as any).price,
                     });
                 } else {
+                    // Portfolio asset does not exist, create it
                     const newPortfolioAsset: PortfolioAsset = {
-                        id: asset.id,
-                        name: (asset as any).name,
+                        id: assetId,
+                        name: (asset as any).name || (asset as any).projectName,
                         type: isCredit ? 'Credit' : 'Project',
                         quantity: quantity,
                         purchasePrice: (asset as any).tokenPrice || (asset as any).price,
@@ -142,13 +143,18 @@ export default function TradePage() {
                     transaction.set(portfolioAssetRef, newPortfolioAsset);
                 }
             });
+            
+            setShowConfirmation(true);
 
-        } catch (e) {
+        } catch (e: any) {
             console.error("Purchase transaction failed: ", e);
-            // Even if it fails, we will show success to the user as requested.
+            toast({
+                title: "Purchase Failed",
+                description: e.message || "Could not complete the purchase. Please check permissions and try again.",
+                variant: "destructive",
+            });
         } finally {
             setIsPurchasing(false);
-            setShowConfirmation(true);
         }
     };
 
@@ -164,6 +170,7 @@ export default function TradePage() {
     const name = (asset as any).name || `${(asset as any).projectName} Credits`;
     const price = (asset as any).tokenPrice || (asset as any).price;
     const unit = isCredit ? 'kWh' : 'Token(s)';
+    const available = (asset as SolarProject).tokensAvailable || (asset as EnergyCredit).amount;
 
     const totalCost = quantity * price;
 
@@ -192,11 +199,11 @@ export default function TradePage() {
                                     value={quantity}
                                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                     min="1"
-                                    max={(asset as SolarProject).tokensAvailable}
+                                    max={available}
                                     disabled={isPurchasing}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    {(asset as SolarProject).tokensAvailable?.toLocaleString() || 'N/A'} available
+                                    {available.toLocaleString()} available
                                 </p>
                             </div>
                             <div className="space-y-2 text-sm">
