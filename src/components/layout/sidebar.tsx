@@ -33,7 +33,6 @@ import {
   User,
   LogOut,
   Gift,
-  Code,
   Bell,
   FileText,
   Shield,
@@ -59,7 +58,6 @@ const userNavItems = [
   { href: '/rewards', icon: Gift, label: 'Rewards' },
   { href: '/reporting', icon: AreaChart, label: 'Reporting' },
   { href: '/disputes', icon: Gavel, label: 'Disputes' },
-  { href: '/api', icon: Code, label: 'API' },
 ];
 
 const sellerNavItems = [
@@ -84,16 +82,25 @@ export function AppSidebar() {
       if (user) {
         setUser(user);
         const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const userRole = docSnap.data().role;
-          setRole(userRole);
-          localStorage.setItem('userRole', userRole); // Keep localStorage for non-reactive parts
-        } else {
-          // Handle case where user exists in Auth but not in Firestore
-          console.log("User document not found in Firestore.");
-          setRole(null);
-          localStorage.removeItem('userRole');
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const userRole = docSnap.data().role;
+            setRole(userRole);
+            localStorage.setItem('userRole', userRole); // Keep localStorage for non-reactive parts
+          } else {
+            console.log("User document not found in Firestore, falling back to localStorage.");
+            const localRole = localStorage.getItem('userRole');
+            if (localRole) {
+              setRole(localRole);
+            }
+          }
+        } catch (error) {
+            console.error("Error fetching user role, falling back to localStorage:", error);
+            const localRole = localStorage.getItem('userRole');
+            if (localRole) {
+              setRole(localRole);
+            }
         }
       } else {
         setUser(null);

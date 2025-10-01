@@ -82,7 +82,7 @@ export default function DisputesPage() {
         setDetails("");
     } catch (error) {
         console.error("Error filing dispute: ", error);
-        toast({ title: "Error", description: "There was a problem filing your dispute.", variant: "destructive" });
+        toast({ title: "Error", description: "There was a problem filing your dispute. Check Firestore rules.", variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
