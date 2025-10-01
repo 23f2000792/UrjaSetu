@@ -5,27 +5,30 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, query, collection, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BarChart2, ListOrdered, CircleDollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SolarProject } from "@/lib/mock-data";
+import type { SolarProject, Transaction } from "@/lib/mock-data";
 import EditProjectForm from "@/components/seller/edit-project-form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 export default function ManageProjectPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
     const [project, setProject] = useState<SolarProject | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
 
         const docRef = doc(db, "projects", id);
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        const unsubscribeProject = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 setProject({ id: docSnap.id, ...docSnap.data() } as SolarProject);
             } else {
@@ -35,7 +38,24 @@ export default function ManageProjectPage() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const transactionsQuery = query(
+            collection(db, "transactions"), 
+            where("projectId", "==", id),
+            orderBy("timestamp", "desc")
+        );
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+            const trans: Transaction[] = [];
+            snapshot.forEach(doc => {
+                trans.push({ id: doc.id, ...doc.data() } as Transaction);
+            });
+            setTransactions(trans);
+        });
+
+
+        return () => {
+            unsubscribeProject();
+            unsubscribeTransactions();
+        };
     }, [id]);
 
     if (loading) {
@@ -67,8 +87,15 @@ export default function ManageProjectPage() {
         )
     }
 
-    const tokensSold = project.totalTokens - project.tokensAvailable;
-    const revenue = tokensSold * project.tokenPrice;
+    const tokensSold = transactions.reduce((acc, tx) => acc + tx.quantity, 0);
+    const revenue = transactions.reduce((acc, tx) => acc + tx.totalCost, 0);
+    const totalOrders = transactions.length;
+
+    const formatDate = (timestamp: any) => {
+        if (!timestamp) return 'N/A';
+        return (timestamp.toDate ? timestamp.toDate() : new Date(timestamp)).toLocaleDateString();
+    };
+
 
     return (
         <div className="space-y-8">
@@ -117,8 +144,8 @@ export default function ManageProjectPage() {
                         <ListOrdered className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold">0</p> {/* Placeholder, requires transaction query */}
-                        <p className="text-xs text-muted-foreground">0 pending, 0 completed</p>
+                        <p className="text-2xl font-bold">{totalOrders}</p>
+                        <p className="text-xs text-muted-foreground">{transactions.filter(t => t.status === "Pending").length} pending</p>
                     </CardContent>
                 </Card>
             </div>
@@ -131,7 +158,32 @@ export default function ManageProjectPage() {
                             <CardDescription>A list of recent token purchases for this project.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-muted-foreground text-center py-8">Order tracking will be implemented here.</p>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Total Cost</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {transactions.length > 0 ? (
+                                        transactions.slice(0, 5).map(tx => (
+                                            <TableRow key={tx.id}>
+                                                <TableCell>{formatDate(tx.timestamp)}</TableCell>
+                                                <TableCell>{tx.quantity}</TableCell>
+                                                <TableCell>Rs. {tx.totalCost.toFixed(2)}</TableCell>
+                                                <TableCell><Badge variant="secondary">{tx.status}</Badge></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center h-24">No orders yet.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </div>
