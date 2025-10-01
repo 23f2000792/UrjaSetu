@@ -3,111 +3,82 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
-    function isAuth() {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
+
+    // Helper function to check if the user is the owner of the resource
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    function isSeller() {
-        return isAuth() && userRole() == 'seller';
-    }
-     function isAdmin() {
-        return isAuth() && userRole() == 'admin';
+    
+    // Helper function to check for a specific role
+    function hasRole(role) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
     // Users Collection
     match /users/{userId} {
-      // Anyone can create a user profile (signup)
-      allow create: if isAuth();
-      // Any authenticated user can view public user profiles
-      allow get: if isAuth();
-      // A user can only update their own profile
-      allow update: if isOwner(userId);
-      // Users cannot delete their profiles for now
-      allow delete: if false;
+      allow create: if request.auth.uid == userId; // Allow user to create their own profile
+      allow read: if isAuthenticated(); // Allow any authenticated user to read profiles (for leaderboards, etc.)
+      allow write: if isOwner(userId); // Allow user to update their own profile
     }
 
     // Projects Collection
     match /projects/{projectId} {
-      // Any authenticated user can view projects
-      allow get, list: if isAuth();
-      // Only verified sellers can create projects
-      allow create: if isSeller() && request.resource.data.ownerId == request.auth.uid;
-      // Only the project owner can update their own project details,
-      // and they cannot change the ownerId
-      allow update: if isSeller() && resource.data.ownerId == request.auth.uid
-                    && request.resource.data.ownerId == resource.data.ownerId;
-      // Admins can also update projects (e.g., to change status)
-      allow update: if isAdmin();
-      // Only the project owner or an admin can delete a project
-      allow delete: if isSeller() && resource.data.ownerId == request.auth.uid;
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated(); // Allow any authenticated user to see project listings
+      allow create: if hasRole('seller'); // Only sellers can create projects
+      allow update: if hasRole('seller') && resource.data.ownerId == request.auth.uid; // Only the owner can update their project
+      // Add 'delete' rule if needed
     }
     
-    // PortfolioAssets Collection
-    match /portfolioAssets/{assetId} {
-        // Users can create their own portfolio asset entries
-        allow create: if isOwner(request.resource.data.userId);
-        // A user can only read their own portfolio assets
-        allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
-        // A user can only update their own portfolio assets
-        allow update: if isOwner(resource.data.userId);
-        // Users cannot delete portfolio assets for now (should be done via selling)
-        allow delete: if false;
+    // Energy Credits Collection
+    match /energyCredits/{creditId} {
+        allow read: if isAuthenticated();
+        allow create: if hasRole('seller');
+        allow update: if hasRole('seller') && resource.data.ownerId == request.auth.uid;
     }
 
     // Transactions Collection
     match /transactions/{transactionId} {
-        // Any authenticated user can create a transaction record for themselves
-        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-        // A user can only read their own transactions
-        allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
-        // Admins can view any transaction
-        allow get, list: if isAdmin();
-        // Transactions are immutable
-        allow update, delete: if false;
-    }
-
-    // Disputes Collection
-    match /disputes/{disputeId} {
-        // Authenticated users can create their own disputes
-        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-        // Users can read their own disputes
-        allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
-        // Sellers and Admins can read all disputes for review
-        allow get, list: if isSeller() || isAdmin();
-        // Sellers and Admins can update dispute status
-        allow update: if isSeller() || isAdmin();
-        // Only admins can delete disputes
-        allow delete: if isAdmin();
+      // Users can create their own transactions, and read them for history/reporting.
+      allow create, read: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // No updates or deletes allowed for transaction records to maintain integrity
     }
     
-    // Documents Collection (for KYC, etc.)
-    match /documents/{documentId} {
-      // Users can upload their own documents
-      allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
-      // Users can only read their own documents
-      allow get, list: if isAuth() && resource.data.ownerId == request.auth.uid;
-      // Admins can read all documents for verification
-      allow get, list: if isAdmin();
-      // Admins can update the status of documents
-      allow update: if isAdmin();
-      // Only the owner or an admin can delete a document
-      allow delete: if (isAuth() && resource.data.ownerId == request.auth.uid) || isAdmin();
+    // Portfolio Assets Collection
+    match /portfolioAssets/{assetId} {
+        // Users can only interact with their own portfolio assets.
+        // The assetId is expected to be in the format `userId_marketAssetId`
+        allow read, create, update, delete: if isAuthenticated() && isOwner(assetId.split('_')[0]);
     }
-
-    // Proposals Collection (for Governance)
+    
+    // Disputes Collection
+    match /disputes/{disputeId} {
+        // Any user can create a dispute for themselves.
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        // Users can read their own disputes. Admins can read all disputes.
+        allow read: if (isAuthenticated() && isOwner(resource.data.userId)) || hasRole('admin');
+        // Admins can update the status of any dispute.
+        allow update: if hasRole('admin');
+    }
+    
+    // Documents Collection
+    match /documents/{documentId} {
+        // Any user can upload a document for themselves.
+        allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+        // Users can read their own documents. Admins can read all documents for review.
+        allow read: if (isAuthenticated() && isOwner(resource.data.ownerId)) || hasRole('admin');
+        // Admins can update the status of any document.
+        allow update: if hasRole('admin');
+    }
+    
+    // Governance Proposals Collection
     match /proposals/{proposalId} {
-        // Any authenticated user can read proposals
-        allow get, list: if isAuth();
-        // Rules for creating/updating proposals can be added here
-        // e.g., allow create: if isSeller() || isAdmin();
-        allow create, update, delete: if isAdmin(); // Only admins for now
+        allow read: if isAuthenticated(); // All authenticated users can read proposals
+        // More complex write rules would go here (e.g., only DAO members can create)
     }
   }
 }
