@@ -87,6 +87,7 @@ export default function TradePage() {
 
         try {
             const projectRef = doc(db, collectionName, assetId);
+            // The portfolio asset ID is a composite of the user's UID and the marketplace asset ID
             const portfolioAssetId = `${user.uid}_${asset.id}`;
             const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
 
@@ -164,7 +165,7 @@ export default function TradePage() {
             console.error("Purchase transaction failed: ", e);
             toast({
                 title: "Purchase Failed",
-                description: typeof e === 'string' ? e : "An error occurred during the transaction.",
+                description: typeof e === 'string' ? e : "An error occurred during the transaction. Check Firestore rules.",
                 variant: "destructive"
             });
             setPurchaseSuccess(false);
@@ -368,3 +369,5 @@ export default function TradePage() {
         </div>
     );
 }
+
+    
