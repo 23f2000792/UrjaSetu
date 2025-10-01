@@ -3,70 +3,106 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isRole(role) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isProjectOwner(projectId) {
-      let projectResource = get(/databases/$(database)/documents/projects/$(projectId)).data;
-      return isSignedIn() && projectResource.ownerId == request.auth.uid;
-    }
-
-    // Collection Rules
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create; // Allow user creation during sign-up
-      allow update: if isOwner(userId);
+      return request.auth.uid == userId;
     }
     
-    match /projects/{projectId} {
-      allow read: if isSignedIn();
-      allow create: if isRole('seller');
-      allow update: if isProjectOwner(projectId) && isRole('seller');
-      allow delete: if isProjectOwner(projectId) && isRole('seller');
+    function isProjectOwner(projectId) {
+      let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
+      return projectData.ownerId == request.auth.uid;
     }
 
+    // USER PROFILES
+    // Users can read their own profile.
+    // Users can only create their own profile document.
+    // Users can only update their own profile document.
+    match /users/{userId} {
+      allow read, update: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn();
+    }
+    
+    // NOTIFICATIONS
+    // Users can read and create their own notifications.
+    match /notifications/{notificationId} {
+       allow read, create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+       allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // PROJECTS
+    // Any signed-in user can read project listings.
+    // Only sellers can create projects.
+    // Only the project owner (seller) can update most project fields.
+    // A buyer can update a project ONLY to decrement tokensAvailable during a purchase.
+    match /projects/{projectId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isRole('seller');
+      allow delete: if isSignedIn() && isRole('seller') && isProjectOwner(projectId);
+      allow update: if isSignedIn() && isRole('seller') && isProjectOwner(projectId)
+      // This rule allows a buyer to update ONLY the tokensAvailable field, and only to decrease it.
+      || (isSignedIn() && isRole('buyer') 
+          && request.resource.data.tokensAvailable == resource.data.tokensAvailable - request.resource.data.purchaseQuantity
+          && request.resource.data.diff.affectedKeys().hasOnly(['tokensAvailable']));
+    }
+
+    // ENERGY CREDITS
+    // Any signed-in user can read energy credit listings.
     match /energyCredits/{creditId} {
       allow read: if isSignedIn();
     }
     
-    match /portfolioAssets/{portfolioAssetId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // create and update are handled within the purchase transaction rule
-    }
-    
+    // TRANSACTIONS
+    // Users can read their own transactions.
+    // Users can create their own transaction documents.
+    // Transactions are immutable once created.
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-       // create is handled within the purchase transaction rule
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
 
+    // PORTFOLIO ASSETS
+    // Users can read, create, and update their own portfolio assets.
+    match /portfolioAssets/{portfolioAssetId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if false; // Generally, assets shouldn't be hard-deleted from a portfolio
+    }
+
+    // DISPUTES
+    // Users can create their own disputes.
+    // Users can read their own disputes.
+    // Admins can read and update any dispute.
     match /disputes/{disputeId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRole('admin') || isRole('seller'));
-      allow create: if isRole('buyer');
-      allow update: if isRole('admin') || isRole('seller');
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRole('admin') || isRole('seller'));
+        allow update: if isSignedIn() && (isRole('admin') || isRole('seller'));
     }
 
+    // DOCUMENTS (for KYC/Project Verification)
+    // Only the owner can create/read their own documents.
+    // Only admins can update the status of documents.
     match /documents/{documentId} {
-      allow read, write: if isRole('admin') || isOwner(resource.data.ownerId);
+        allow create, read: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+        allow update: if isSignedIn() && isRole('admin');
     }
-    
+
+    // PROPOSALS (Governance)
+    // Any signed-in user can read proposals.
+    // Only sellers can create proposals.
+    // A user can vote (update) on a proposal.
     match /proposals/{proposalId} {
-      allow read: if isSignedIn();
-      allow create: if isRole('seller');
-      allow update(path, resource, requestResource): if isSignedIn(); // Allow voting
-    }
-    
-    match /notifications/{notificationId} {
-      allow read, write: if isOwner(resource.data.userId);
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isRole('seller');
+        allow update: if isSignedIn(); // Allows for voting (incrementing vote counts)
     }
   }
 }
