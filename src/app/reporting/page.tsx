@@ -15,6 +15,8 @@ import { collection, onSnapshot, query, where, Timestamp } from "firebase/firest
 import { auth, db } from "@/lib/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { User } from 'firebase/auth';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const chartConfig = {
     generated: {
@@ -95,6 +97,36 @@ export default function ReportingPage() {
     const totalGenerated = data.reduce((acc, item) => acc + item.generated, 0);
     const totalOffset = data.reduce((acc, item) => acc + item.offset, 0);
 
+    const handleDownload = () => {
+        const doc = new jsPDF();
+        const tableColumns = ["Date", "Energy Generated (kWh)", "Carbon Offset (kg CO₂e)"];
+        const tableRows = data.map(item => [
+            format(new Date(item.date), "LLL dd, y"),
+            item.generated.toLocaleString(),
+            item.offset.toLocaleString()
+        ]);
+        
+        doc.setFontSize(18);
+        doc.text("Sustainability Report", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+
+        const dateRange = `Period: ${date?.from ? format(date.from, 'LLL dd, y') : ''} - ${date?.to ? format(date.to, 'LLL dd, y') : ''}`;
+        doc.text(dateRange, 14, 30);
+        
+        doc.setFontSize(12);
+        doc.text(`Total Energy Generated: ${totalGenerated.toLocaleString()} kWh`, 14, 40);
+        doc.text(`Total Carbon Offset: ${totalOffset.toLocaleString()} kg CO₂e`, 14, 48);
+
+        (doc as any).autoTable({
+            startY: 55,
+            head: [tableColumns],
+            body: tableRows,
+        });
+
+        doc.save(`UrjaSetu_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    };
+
   return (
     <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -138,7 +170,7 @@ export default function ReportingPage() {
                         />
                     </PopoverContent>
                 </Popover>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleDownload}>
                     <Download className="mr-2 h-4 w-4" />
                     Download
                 </Button>
@@ -202,5 +234,3 @@ export default function ReportingPage() {
     </div>
   );
 }
-
-    

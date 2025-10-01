@@ -2,16 +2,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { type SolarProject } from "@/lib/mock-data";
-import { Loader2, Edit, DollarSign, Zap } from "lucide-react";
+import { Loader2, Edit, DollarSign, Zap, Package, Trash2 } from "lucide-react";
 
 interface EditProjectFormProps {
     project: SolarProject;
@@ -20,7 +22,9 @@ interface EditProjectFormProps {
 export default function EditProjectForm({ project }: EditProjectFormProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const { toast } = useToast();
+    const router = useRouter();
     
     // Form state
     const [name, setName] = useState(project.name);
@@ -30,12 +34,20 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
     const [imageUrl, setImageUrl] = useState(project.imageUrl);
     const [tokenPrice, setTokenPrice] = useState(project.tokenPrice.toString());
     const [capacity, setCapacity] = useState(project.capacity.toString());
+    const [totalTokens, setTotalTokens] = useState(project.totalTokens.toString());
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         const projectRef = doc(db, "projects", project.id);
+        const newTotalTokens = Number(totalTokens);
+        const oldTotalTokens = project.totalTokens;
+        
+        let tokensToAdd = 0;
+        if (newTotalTokens > oldTotalTokens) {
+            tokensToAdd = newTotalTokens - oldTotalTokens;
+        }
 
         try {
             await updateDoc(projectRef, {
@@ -46,6 +58,8 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                 imageUrl,
                 tokenPrice: Number(tokenPrice),
                 capacity: Number(capacity),
+                totalTokens: newTotalTokens,
+                tokensAvailable: increment(tokensToAdd)
             });
 
             toast({
@@ -65,18 +79,40 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
         }
     };
 
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(db, "projects", project.id));
+            toast({
+                title: "Project Deleted",
+                description: `${project.name} has been permanently deleted.`,
+            });
+            router.push("/seller/projects");
+        } catch (error: any) {
+            console.error("Error deleting project: ", error);
+            toast({
+                title: "Deletion Failed",
+                description: `Could not delete project: ${error.message}`,
+                variant: "destructive",
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button><Edit className="mr-2 h-4 w-4" /> Edit Project</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-3xl">
                 <form onSubmit={handleUpdate}>
                     <DialogHeader>
                         <DialogTitle>Edit Project</DialogTitle>
                         <DialogDescription>Update the details for "{project.name}". Click save when you're done.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-8">
+                    <div className="grid gap-6 py-8 max-h-[70vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Project Name</Label>
@@ -89,7 +125,7 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="tokenPrice">Price per Token</Label>
+                                <Label htmlFor="tokenPrice">Price per Token (Rs.)</Label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input id="tokenPrice" type="number" value={tokenPrice} onChange={(e) => setTokenPrice(e.target.value)} className="pl-8"/>
@@ -103,9 +139,19 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="panelType">Panel Type</Label>
-                            <Input id="panelType" value={panelType} onChange={(e) => setPanelType(e.target.value)} />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="total-tokens">Total Token Supply</Label>
+                                <div className="relative">
+                                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input id="total-tokens" type="number" min={project.totalTokens - project.tokensAvailable} value={totalTokens} onChange={(e) => setTotalTokens(e.target.value)} className="pl-8"/>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Cannot be lower than tokens already sold.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="panelType">Panel Type</Label>
+                                <Input id="panelType" value={panelType} onChange={(e) => setPanelType(e.target.value)} />
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="description">Description</Label>
@@ -116,12 +162,39 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                             <Input id="imageUrl" type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>Cancel</Button>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Changes
-                        </Button>
+                    <DialogFooter className="pt-6 border-t flex justify-between w-full">
+                        <div>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button type="button" variant="destructive" disabled={isLoading}>
+                                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                        Delete Project
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete your project and all associated data from our servers.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            Yes, delete project
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>Cancel</Button>
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Changes
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </form>
             </DialogContent>
