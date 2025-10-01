@@ -5,14 +5,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, BarChart2, ListOrdered, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, BarChart2, ListOrdered, CircleDollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SolarProject } from "@/lib/mock-data";
+import EditProjectForm from "@/components/seller/edit-project-form";
 
 export default function ManageProjectPage() {
     const params = useParams();
@@ -24,19 +24,18 @@ export default function ManageProjectPage() {
     useEffect(() => {
         if (!id) return;
 
-        const fetchProject = async () => {
-            const docRef = doc(db, "projects", id);
-            const docSnap = await getDoc(docRef);
-
+        const docRef = doc(db, "projects", id);
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 setProject({ id: docSnap.id, ...docSnap.data() } as SolarProject);
             } else {
                 console.log("No such document!");
+                setProject(null);
             }
             setLoading(false);
-        };
+        });
 
-        fetchProject();
+        return () => unsubscribe();
     }, [id]);
 
     if (loading) {
@@ -85,7 +84,7 @@ export default function ManageProjectPage() {
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">{project.name}</h1>
                         <p className="text-muted-foreground mt-2">{project.location}</p>
                     </div>
-                    <Button><Edit className="mr-2 h-4 w-4" /> Edit Project</Button>
+                    <EditProjectForm project={project} />
                 </div>
             </div>
 
