@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ArrowRight, CheckCircle, Leaf, Zap, Shield, Repeat, Package, BarChart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import AssetCard from "@/components/marketplace/asset-card";
+import LandingProjectCard from "@/components/landing/landing-project-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import type { SolarProject } from "@/lib/mock-data";
 
@@ -236,7 +236,7 @@ export default function LandingPage() {
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {placeholderProjects.map((project) => (
-                        <AssetCard key={project.id} project={project} />
+                        <LandingProjectCard key={project.id} project={project} />
                     ))}
                 </div>
             </div>
@@ -305,5 +305,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
