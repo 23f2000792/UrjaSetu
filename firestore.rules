@@ -1,53 +1,60 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check if a user is an authenticated seller (admin)
-    function isSeller() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+
+    // Helper function to check user role
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
-    
-    // Users collection
+
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Any authenticated user can create their own user document (for signup)
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Users can read their own document. Sellers can read any user's document.
-      allow get: if request.auth != null && (request.auth.uid == userId || isSeller());
-      
-      // Users can update their own document, but cannot change their role.
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.role == resource.data.role;
-                    
-      // Only sellers can delete users (for future functionality)
-      allow delete: if isSeller();
+      // Any authenticated user can read public user profiles
+      allow read: if request.auth != null;
+      // A user can create their own document upon signup
+      allow create: if request.auth.uid == userId;
+      // A user can only update their own document
+      allow update: if request.auth.uid == userId;
+      // Deleting users should be handled by a backend function for safety
+      allow delete: if false;
     }
-    
-    // Documents collection for sellers
+
+    // Rules for the 'documents' collection
     match /documents/{documentId} {
-      // Allow read access to the user who owns the document or any seller
-      allow get: if request.auth.uid == resource.data.ownerId || isSeller();
-      
-      // Allow list access only to sellers (admins)
-      allow list: if isSeller();
-      
-      // Allow document creation if the user is the owner
+      // A user can only create documents for themselves
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      
-      // Allow document updates only by sellers (for status changes)
-      allow update: if isSeller();
+      // A user can read their own documents. A seller can read any document for review.
+      allow read: if request.auth.uid == resource.data.ownerId || isRole('seller');
+      // A seller can update the status of a document
+      allow update: if isRole('seller');
+      // No one can delete documents directly to maintain records
+      allow delete: if false;
     }
-    
-    // Disputes collection
+
+    // Rules for the 'projects' collection
+    match /projects/{projectId} {
+        // Any authenticated user can view projects
+        allow read: if request.auth != null;
+        // Only sellers can create projects
+        allow create: if isRole('seller') && request.auth.uid == request.resource.data.ownerId;
+        // Only the project owner can update their own project
+        allow update: if isRole('seller') && request.auth.uid == resource.data.ownerId;
+        // Deletion should be a privileged action
+        allow delete: if false;
+    }
+
+    // Rules for the 'disputes' collection
     match /disputes/{disputeId} {
-        // Any authenticated user can create a dispute
-        allow create: if request.auth != null;
-        
-        // Users can read their own disputes. Sellers can read all disputes.
-        allow get, list: if request.auth != null && (resource.data.userId == request.auth.uid || isSeller());
-        
-        // Only sellers can update (e.g., change status) or delete disputes
-        allow update, delete: if isSeller();
+        // Any authenticated user can create a dispute for themselves
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        // A user can read their own disputes. Sellers can read all disputes.
+        allow read: if request.auth.uid == resource.data.userId || isRole('seller');
+        // Only sellers can update a dispute's status
+        allow update: if isRole('seller');
+        // No one should delete disputes
+        allow delete: if false;
     }
   }
 }

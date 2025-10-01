@@ -1,0 +1,17 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to write (upload) to their own folder within 'documents' or 'projects'
+    match /{path}/{userId}/{fileName} where path in ['documents', 'projects'] {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow anyone to read files as URLs are typically public but unguessable
+    // You can tighten this if documents should not be publicly readable even with the URL
+    match /{allPaths=**} {
+      allow read;
+    }
+  }
+}
