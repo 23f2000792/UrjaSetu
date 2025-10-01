@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, DollarSign } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Upload, DollarSign, Image as ImageIcon, FileText } from "lucide-react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -23,13 +22,20 @@ export default function AddFarmPage() {
   const [description, setDescription] = useState("");
   const [totalTokens, setTotalTokens] = useState("");
   const [tokenPrice, setTokenPrice] = useState("");
+  const [projectImage, setProjectImage] = useState<File | null>(null);
   const [documents, setDocuments] = useState<File[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProjectImage(e.target.files[0]);
+    }
+  };
+
+  const handleDocumentsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setDocuments(Array.from(e.target.files));
     }
@@ -42,26 +48,32 @@ export default function AddFarmPage() {
         toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
         return;
     }
-    if (!projectName || !location || !capacity || !totalTokens || !tokenPrice) {
-      toast({ title: "Missing Fields", description: "Please fill out all required fields.", variant: "destructive" });
+    if (!projectName || !location || !capacity || !totalTokens || !tokenPrice || !projectImage) {
+      toast({ title: "Missing Fields", description: "Please fill out all required fields and upload a project image.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
 
     try {
-      // 1. Upload documents to Firebase Storage
+      const storage = getStorage();
+
+      // 1. Upload Project Image
+      const imageRef = ref(storage, `projects/${user.uid}/${projectName}/project-image/${projectImage.name}`);
+      const imageSnapshot = await uploadBytes(imageRef, projectImage);
+      const imageUrl = await getDownloadURL(imageSnapshot.ref);
+
+      // 2. Upload PDF Documents
       const documentUrls: { name: string, url: string }[] = [];
       if (documents.length > 0) {
-        const storage = getStorage();
         for (const doc of documents) {
-          const storageRef = ref(storage, `projects/${user.uid}/${projectName}/${doc.name}`);
-          const snapshot = await uploadBytes(storageRef, doc);
+          const docRef = ref(storage, `projects/${user.uid}/${projectName}/documents/${doc.name}`);
+          const snapshot = await uploadBytes(docRef, doc);
           const downloadURL = await getDownloadURL(snapshot.ref);
           documentUrls.push({ name: doc.name, url: downloadURL });
         }
       }
 
-      // 2. Add project details to Firestore
+      // 3. Add project details to Firestore
       await addDoc(collection(db, "projects"), {
         ownerId: user.uid,
         name: projectName,
@@ -69,6 +81,7 @@ export default function AddFarmPage() {
         capacity: Number(capacity),
         panelType,
         description,
+        imageUrl,
         totalTokens: Number(totalTokens),
         tokensAvailable: Number(totalTokens), // Initially, all tokens are available
         tokenPrice: Number(tokenPrice),
@@ -160,19 +173,24 @@ export default function AddFarmPage() {
 
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Supporting Documents</CardTitle>
-            <CardDescription>Upload certifications, legal agreements, or other relevant files. (Optional)</CardDescription>
+            <CardTitle>Project Media & Documents</CardTitle>
+            <CardDescription>Upload a main image for the project and any supporting PDF documents.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="documents">Project Files</Label>
-              <Input id="documents" type="file" multiple onChange={handleFileChange} />
+                <Label htmlFor="project-image" className="flex items-center gap-2"><ImageIcon /> Project Image (Required)</Label>
+                <Input id="project-image" type="file" accept="image/*" onChange={handleImageChange} required/>
+                {projectImage && <p className="text-sm text-muted-foreground">Selected: {projectImage.name}</p>}
             </div>
-            {documents.length > 0 && (
-                <ul className="mt-4 list-disc list-inside text-sm text-muted-foreground">
+            <div className="space-y-2">
+              <Label htmlFor="documents" className="flex items-center gap-2"><FileText /> Certifications / Legal (PDFs)</Label>
+              <Input id="documents" type="file" multiple accept=".pdf" onChange={handleDocumentsChange} />
+               {documents.length > 0 && (
+                <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground">
                     {documents.map((doc, i) => <li key={i}>{doc.name}</li>)}
                 </ul>
             )}
+            </div>
           </CardContent>
         </Card>
 
@@ -186,4 +204,3 @@ export default function AddFarmPage() {
     </div>
   );
 }
-
