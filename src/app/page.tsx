@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, Zap, Leaf, Users, Activity, ShieldAlert } from "lucide-react";
+import { DollarSign, Zap, Leaf, ShieldAlert } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import { AdminStats } from "@/components/admin/admin-stats";
