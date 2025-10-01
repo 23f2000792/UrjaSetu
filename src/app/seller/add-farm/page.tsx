@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, DollarSign, Image as ImageIcon, FileText } from "lucide-react";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Loader2, Upload, DollarSign, Image as ImageIcon } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import Image from "next/image";
 
 export default function AddFarmPage() {
   const [projectName, setProjectName] = useState("");
@@ -22,17 +22,11 @@ export default function AddFarmPage() {
   const [description, setDescription] = useState("");
   const [totalTokens, setTotalTokens] = useState("");
   const [tokenPrice, setTokenPrice] = useState("");
-  const [projectImage, setProjectImage] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
   
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProjectImage(e.target.files[0]);
-    }
-  };
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,21 +35,14 @@ export default function AddFarmPage() {
         toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
         return;
     }
-    if (!projectName || !location || !capacity || !totalTokens || !tokenPrice || !projectImage) {
-      toast({ title: "Missing Fields", description: "Please fill out all required fields and upload a project image.", variant: "destructive" });
+    if (!projectName || !location || !capacity || !totalTokens || !tokenPrice || !imageUrl) {
+      toast({ title: "Missing Fields", description: "Please fill out all required fields and provide a project image URL.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
 
     try {
-      const storage = getStorage();
-
-      // 1. Upload Project Image
-      const imageRef = ref(storage, `project-images/${user.uid}-${projectImage.name}-${Date.now()}`);
-      await uploadBytes(imageRef, projectImage);
-      const imageUrl = await getDownloadURL(imageRef);
-
-      // 2. Add project details to Firestore
+      // Add project details to Firestore
       await addDoc(collection(db, "projects"), {
         ownerId: user.uid,
         name: projectName,
@@ -155,14 +142,28 @@ export default function AddFarmPage() {
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>Project Media</CardTitle>
-            <CardDescription>Upload a main image for the project listing.</CardDescription>
+            <CardDescription>Provide a URL for the main project image.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="project-image" className="flex items-center gap-2"><ImageIcon /> Project Image (Required)</Label>
-                <Input id="project-image" type="file" accept="image/*" onChange={handleImageChange} required/>
-                {projectImage && <p className="text-sm text-muted-foreground">Selected: {projectImage.name}</p>}
+                <Label htmlFor="project-image-url" className="flex items-center gap-2"><ImageIcon /> Project Image URL (Required)</Label>
+                <Input 
+                  id="project-image-url" 
+                  type="url" 
+                  placeholder="https://example.com/image.png" 
+                  value={imageUrl} 
+                  onChange={(e) => setImageUrl(e.target.value)} 
+                  required 
+                />
             </div>
+            {imageUrl && (
+              <div className="mt-4">
+                <Label>Image Preview</Label>
+                <div className="mt-2 rounded-lg border aspect-video max-h-64 overflow-hidden relative bg-muted">
+                    <Image src={imageUrl} alt="Project image preview" layout="fill" objectFit="cover" />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
