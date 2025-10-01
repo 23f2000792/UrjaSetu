@@ -21,8 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, runTransaction, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
-import type { SolarProject, EnergyCredit, PortfolioAsset, Transaction } from '@/lib/mock-data';
+import { doc, getDoc, collection, serverTimestamp, addDoc } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit, Transaction } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
 export default function TradePage() {
@@ -79,82 +79,32 @@ export default function TradePage() {
         setIsPurchasing(true);
         
         try {
-            const projectRef = doc(db, collectionName, assetId);
-            const portfolioAssetId = `${user.uid}_${assetId}`;
-            const portfolioAssetRef = doc(db, "portfolioAssets", portfolioAssetId);
-            const newTransactionRef = doc(collection(db, "transactions"));
-            
-            await runTransaction(db, async (transaction) => {
-                const projectDoc = await transaction.get(projectRef);
-                const portfolioDoc = await transaction.get(portfolioAssetRef);
+            const price = (asset as any).tokenPrice || (asset as any).price;
+            const sellerId = (asset as SolarProject).ownerId;
 
-                if (!projectDoc.exists()) {
-                    throw "Project does not exist!";
-                }
+            // Create a transaction document. A backend function would listen to this collection.
+            const transactionData: Omit<Transaction, 'id'> = {
+                userId: user.uid,
+                sellerId: sellerId,
+                projectId: assetId,
+                projectName: (asset as any).name || (asset as any).projectName,
+                quantity: quantity,
+                pricePerUnit: price,
+                totalCost: quantity * price,
+                type: 'Buy',
+                status: 'Pending', // Status is pending until backend processes it.
+                timestamp: serverTimestamp() as any
+            };
 
-                const currentProjectData = projectDoc.data() as SolarProject;
-                const price = (asset as any).tokenPrice || (asset as any).price;
-                const available = currentProjectData.tokensAvailable;
-                const sellerId = (asset as SolarProject).ownerId;
-
-                if (quantity > available) {
-                    throw "Not enough tokens available for this purchase.";
-                }
-
-                const newTokensAvailable = available - quantity;
-
-                // 1. Update project token count
-                transaction.update(projectRef, { tokensAvailable: newTokensAvailable });
-
-                // 2. Create a new transaction record
-                const transactionData: Omit<Transaction, 'id'> = {
-                    userId: user.uid,
-                    sellerId: sellerId,
-                    projectId: assetId,
-                    projectName: (asset as any).name || (asset as any).projectName,
-                    quantity: quantity,
-                    pricePerUnit: price,
-                    totalCost: quantity * price,
-                    type: 'Buy',
-                    status: 'Completed',
-                    timestamp: serverTimestamp() as any
-                };
-                transaction.set(newTransactionRef, transactionData);
-
-                // 3. Create or update portfolio asset
-                if (portfolioDoc.exists()) {
-                    // Portfolio asset exists, update it
-                    const currentPortfolioAsset = portfolioDoc.data() as PortfolioAsset;
-                    const newQuantity = currentPortfolioAsset.quantity + quantity;
-                    const newTotalCost = (currentPortfolioAsset.purchasePrice * currentPortfolioAsset.quantity) + (quantity * price);
-                    const newAvgPrice = newTotalCost / newQuantity;
-                    transaction.update(portfolioAssetRef, {
-                        quantity: newQuantity,
-                        purchasePrice: newAvgPrice,
-                        currentValue: price,
-                    });
-                } else {
-                    // Portfolio asset does not exist, create it
-                    const newPortfolioAsset: PortfolioAsset = {
-                        id: assetId,
-                        name: (asset as any).name || (asset as any).projectName,
-                        type: isCredit ? 'Credit' : 'Project',
-                        quantity: quantity,
-                        purchasePrice: price,
-                        currentValue: price,
-                        userId: user.uid,
-                    };
-                    transaction.set(portfolioAssetRef, newPortfolioAsset);
-                }
-            });
+            await addDoc(collection(db, "transactions"), transactionData);
             
             setShowConfirmation(true);
 
         } catch (e: any) {
-            console.error("Purchase transaction failed: ", e);
+            console.error("Purchase failed: ", e);
             toast({
                 title: "Purchase Failed",
-                description: e.toString(),
+                description: e.message || "Could not complete the purchase. Please check permissions.",
                 variant: "destructive",
             });
         } finally {
@@ -190,7 +140,7 @@ export default function TradePage() {
             <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle className="text-primary text-xl">Buy {name}</CardTitle>
-                    <CardDescription>You are purchasing {unit}.</CardDescription>
+                    <CardDescription>You are purchasing {unit}. Your purchase will be processed securely.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div>
@@ -242,10 +192,10 @@ export default function TradePage() {
                     <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <CheckCircle className="h-6 w-6 text-primary" />
-                        Payment Successful
+                        Purchase Submitted
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Your purchase of <strong>{quantity} {unit}</strong> of <strong>{name}</strong> for <strong>Rs. {totalCost.toFixed(2)}</strong> was successful. The assets have been added to your portfolio.
+                        Your purchase of <strong>{quantity} {unit}</strong> of <strong>{name}</strong> for <strong>Rs. {totalCost.toFixed(2)}</strong> has been submitted for processing. The assets will appear in your portfolio shortly.
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -260,5 +210,3 @@ export default function TradePage() {
         </div>
     );
 }
-
-    
