@@ -4,75 +4,64 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow users to read their own user document
+    // Users
     match /users/{userId} {
-      allow read: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      // Allow authenticated users to read all profiles for leaderboard, but only write to their own.
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow authenticated users to read projects, credits, and proposals
+    // Projects
     match /projects/{projectId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || (request.auth != null && request.auth.uid == resource.data.ownerId);
     }
+
+    // Energy Credits
     match /energyCredits/{creditId} {
-      allow read: if request.auth != null;
-    }
-    match /proposals/{proposalId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == request.resource.data.proposerId;
-      allow update: if request.auth.uid == resource.data.proposerId || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votesFor', 'votesAgainst']);
+      allow read: if true;
     }
 
-    // Transactions:
-    // - Buyers can create their own transactions.
-    // - Buyers and Sellers can read transactions they are a part of.
+    // Transactions
     match /transactions/{transactionId} {
-      allow create: if request.auth.uid == request.resource.data.userId;
-      allow read: if request.auth.uid == resource.data.userId || request.auth.uid == resource.data.sellerId;
+       // Allow authenticated users to read all transactions for leaderboard/activity feeds
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
     
-    // Notifications can be read by the user they are for
+    // Notifications
     match /notifications/{notificationId} {
-      allow read, write: if request.auth.uid == resource.data.userId;
-    }
-
-    // Documents:
-    // - Users can create their own documents
-    // - Users can only read their own documents
-    // - A special 'admin' role can read all documents
-    match /documents/{documentId} {
-        allow create: if request.auth.uid == request.resource.data.ownerId;
-        allow read: if request.auth.uid == resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Disputes:
-    // - Buyers can create disputes for their own transactions.
-    // - Buyers, sellers, and admins can read a dispute they are a party to.
-    // - Participants can add messages.
-    // - Sellers can update the status.
-    // - Buyers can update the rating after resolution.
-    match /disputes/{disputeId} {
-        allow create: if request.auth.uid == request.resource.data.userId;
-        allow read: if request.auth.uid == resource.data.userId || request.auth.uid == resource.data.sellerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        
-        // Allow seller to update status, and buyer to add rating
-        allow update: if (request.auth.uid == resource.data.sellerId && request.resource.data.status != resource.data.status) || 
-                       (request.auth.uid == resource.data.userId && request.resource.data.rating != resource.data.rating && resource.data.status == 'Resolved');
-
-        match /messages/{messageId} {
-            allow read, create: if request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId || request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        }
+        allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // Allow any authenticated user to read from collections needed for leaderboards
-    match /{path=**}/users/{userId} {
-      allow list: if request.auth != null;
+    // Documents
+    match /documents/{documentId} {
+        allow read, create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+        allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    match /{path=**}/transactions/{transactionId} {
-      allow list: if request.auth != null;
+
+    // Disputes
+    match /disputes/{disputeId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.sellerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Allow seller to update status, allow buyer to update rating
+      allow update: if request.auth != null && 
+                    ((request.auth.uid == resource.data.sellerId) || 
+                     (request.auth.uid == resource.data.userId && request.resource.data.rating != resource.data.rating) && resource.data.status == 'Resolved');
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read, create: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId || request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId);
+      }
+    }
+    
+    // Proposals
+    match /proposals/{proposalId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null; // Simplistic rule, allows voting and status changes
     }
   }
 }
