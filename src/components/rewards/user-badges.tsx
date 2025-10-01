@@ -6,18 +6,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Award, Leaf, TrendingUp, Users, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 
 const allBadges = [
-    { 
-        id: "pioneer",
-        icon: <Award className="w-8 h-8" />, 
-        title: "Pioneer", 
-        description: "Join UrjaSetu in the first month of launch.",
-        criteria: (data: { joinDate?: Date }) => data.joinDate ? data.joinDate < new Date('2024-08-01') : false,
-        color: "text-yellow-400"
-    },
     { 
         id: "investor",
         icon: <TrendingUp className="w-8 h-8" />, 
@@ -61,24 +53,24 @@ export function UserBadges() {
             return;
         }
 
-        const fetchBadgeData = async () => {
-            setLoading(true);
-
-            // Fetch transaction data
-            const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
-            const transactionSnapshot = await getDocs(transactionsQuery);
+        setLoading(true);
+        // Fetch transaction data
+        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
+        
+        const unsubscribe = onSnapshot(transactionsQuery, (transactionSnapshot) => {
             const transactionCount = transactionSnapshot.size;
             
             let totalEnergy = 0;
+            const projectIds = new Set<string>();
+
             transactionSnapshot.forEach(doc => {
                  totalEnergy += (doc.data().quantity || 0) * 120; // 1 token = 120 kWh
+                 if (doc.data().type === 'Buy') {
+                    projectIds.add(doc.data().projectId);
+                 }
             });
             const carbonOffset = totalEnergy * 0.707;
-
-            // Fetch portfolio data
-            const portfolioQuery = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
-            const portfolioSnapshot = await getDocs(portfolioQuery);
-            const portfolioCount = portfolioSnapshot.size;
+            const portfolioCount = projectIds.size;
             
             // Check criteria
             const dataForCriteria = {
@@ -94,9 +86,9 @@ export function UserBadges() {
 
             setUnlockedBadges(unlocked);
             setLoading(false);
-        };
+        });
 
-        fetchBadgeData();
+        return () => unsubscribe();
 
     }, [user]);
 
