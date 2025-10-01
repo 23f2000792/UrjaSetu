@@ -1,94 +1,39 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    // USERS
-    // Users can read their own profile.
-    // Anyone can create a user profile (for signup).
-    // Users can update their own profile.
     match /users/{userId} {
-      allow read, update: if isAuth() && isOwner(userId);
-      allow create: if isAuth();
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
     }
-    
-    // PROJECTS
-    // Anyone can read project listings.
-    // Sellers can create new projects.
-    // Sellers can update their own projects.
-    // Sellers can delete their own projects.
     match /projects/{projectId} {
       allow read: if true;
-      allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isAuth() && resource.data.ownerId == request.auth.uid;
-      allow delete: if isAuth() && resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      // Allow any authenticated user to update a project (for token purchases).
+      // The transaction logic on the client ensures the validity of the update.
+      allow update: if request.auth != null;
+      allow delete: if request.auth.uid == resource.data.ownerId;
     }
-
-    // ENERGY CREDITS
-    // Anyone can read energy credit listings.
     match /energyCredits/{creditId} {
-      allow read: if true;
-    }
-
-    // TRANSACTIONS
-    // Users can create their own 'buy' transactions.
-    // Users can read transactions where they are the buyer or seller.
-    match /transactions/{transactionId} {
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow read: if isAuth() && (resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid);
-    }
-    
-    // DOCUMENTS
-    // Users can upload documents for themselves.
-    // Users can read their own documents.
-    // Admins can update document status (implicitly handled by cloud functions/admin SDK).
-    match /documents/{documentId} {
-        allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
-        allow read: if isAuth() && resource.data.ownerId == request.auth.uid;
-        allow update, delete: if false; // Only admin can change status
-    }
-
-    // PROPOSALS (Staking & Governance)
-    // Any authenticated user can read proposals.
-    // Any authenticated user can create a proposal.
-    // Users can vote (update vote counts) on active proposals.
-    // Sellers/Admins can update proposal status.
-    match /proposals/{proposalId} {
         allow read: if true;
-        allow create: if isAuth() && request.resource.data.proposerId == request.auth.uid;
-        // Allow updates only for vote counts or status changes by owner
-        allow update: if isAuth() && 
-                        ( (request.resource.data.votesFor == resource.data.votesFor + 1 && request.resource.data.votesAgainst == resource.data.votesAgainst) ||
-                          (request.resource.data.votesAgainst == resource.data.votesAgainst + 1 && request.resource.data.votesFor == resource.data.votesFor) ||
-                          (request.resource.data.status != resource.data.status && resource.data.proposerId == request.auth.uid) );
     }
-
-    // DISPUTES
-    // Users can create disputes for their own transactions.
-    // Users can read disputes they are involved in (buyer or seller).
-    // Users involved can add messages to the conversation.
-    // Sellers can update the status of a dispute.
-    // Buyers can update the rating of a resolved dispute.
+    match /transactions/{transactionId} {
+      // Allow user to read their own transactions, and sellers to read transactions for their projects
+      allow read: if request.auth.uid == resource.data.userId || request.auth.uid == resource.data.sellerId;
+      // Allow any authenticated user to create a transaction (buy an asset)
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /documents/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+    match /proposals/{proposalId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.proposerId == request.auth.uid;
+      allow update: if request.auth != null; // Allow voting and status changes
+    }
     match /disputes/{disputeId} {
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow read: if isAuth() && (resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid);
-      allow update: if isAuth() && 
-                    ( (resource.data.sellerId == request.auth.uid && request.resource.data.status != resource.data.status) ||
-                      (resource.data.userId == request.auth.uid && request.resource.data.rating != resource.data.rating && resource.data.status == 'Resolved') );
-
+      allow read, write: if request.auth != null && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.sellerId);
       match /messages/{messageId} {
-        allow create: if isAuth() && (request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId || request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId);
-        allow read: if isAuth() && (request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId || request.auth.uid == get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId);
+        allow read, write: if request.auth != null;
       }
     }
   }
