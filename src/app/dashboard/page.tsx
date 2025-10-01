@@ -9,7 +9,7 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import type { PortfolioAsset } from '@/lib/mock-data';
+import type { PortfolioAsset, SolarProject } from '@/lib/mock-data';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
@@ -52,7 +52,7 @@ export default function DashboardPage() {
   }
 
   if (role === 'seller') {
-    return <SellerDashboard />;
+    return <SellerDashboard user={user} />;
   }
   
   // Default to UserDashboard if role is 'buyer' or not set (for fallback)
@@ -138,7 +138,40 @@ function UserDashboard({ user }: { user: User | null }) {
   );
 }
 
-function SellerDashboard() {
+function SellerDashboard({ user }: { user: User | null }) {
+    const [projects, setProjects] = useState<SolarProject[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        };
+
+        const q = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const projectsData: SolarProject[] = [];
+            querySnapshot.forEach((doc) => {
+                projectsData.push({ id: doc.id, ...doc.data() } as SolarProject);
+            });
+            setProjects(projectsData);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Aggregate data from projects
+    const totalRevenue = projects.reduce((acc, p) => {
+        const tokensSold = p.totalTokens - p.tokensAvailable;
+        return acc + (tokensSold * p.tokenPrice);
+    }, 0);
+    const activeProjectsCount = projects.length;
+    const pendingProjectsCount = projects.filter(p => (p as any).status === 'Pending').length;
+    // Mock energy sold for now
+    const energySold = projects.reduce((acc, p) => acc + (p.totalTokens - p.tokensAvailable) * 120, 0); // Assuming 1 token = 120kWh
+
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">Solar Farm Owner Dashboard</h1>
@@ -150,7 +183,7 @@ function SellerDashboard() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">Rs. 5,42,300</div>
+                    <div className="text-2xl font-bold">Rs. {totalRevenue.toLocaleString('en-IN')}</div>
                     <p className="text-xs text-muted-foreground">+18.2% this month</p>
                 </CardContent>
             </Card>
@@ -160,17 +193,17 @@ function SellerDashboard() {
                     <ListTree className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">4</div>
-                    <p className="text-xs text-muted-foreground">1 pending verification</p>
+                    <div className="text-2xl font-bold">{activeProjectsCount}</div>
+                     <p className="text-xs text-muted-foreground">{pendingProjectsCount} pending verification</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Energy Sold</CardTitle>
+                    <CardTitle className="text-sm font-medium">Energy Sold (Est.)</CardTitle>
                     <Zap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">25,800 kWh</div>
+                    <div className="text-2xl font-bold">{energySold.toLocaleString()} kWh</div>
                     <p className="text-xs text-muted-foreground">in the last 30 days</p>
                 </CardContent>
             </Card>
@@ -209,7 +242,3 @@ function SellerDashboard() {
     </div>
   );
 }
-
-    
-
-    
