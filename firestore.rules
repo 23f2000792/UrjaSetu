@@ -2,14 +2,144 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper Functions
+
+    // Helper functions for cleaner, reusable logic
     function isSignedIn() {
       return request.auth != null;
     }
 
-    match /{document=**} {
-      allow read, write: if isSignedIn();
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isProjectOwner(projectId) {
+      let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
+      return request.auth.uid == projectData.ownerId;
+    }
+    
+    // =====================================================================
+    //  USERS Collection
+    //  - Anyone can create their own user profile on signup.
+    //  - Users can only read their own profile.
+    //  - Users can only update their own profile.
+    //  - Admins can read any user profile.
+    // =====================================================================
+    match /users/{userId} {
+      allow read: if isSignedIn() && (isOwner(userId) || isRole('admin'));
+      allow write: if isOwner(userId);
+      allow create: if isSignedIn();
+    }
+
+    // =====================================================================
+    //  PROJECTS Collection
+    //  - Any signed-in user can read/list projects for the marketplace.
+    //  - Only sellers can create new projects.
+    //  - Only the owning seller or an admin can update project details (except for tokensAvailable).
+    //  - A buyer can update `tokensAvailable` during a purchase transaction.
+    // =====================================================================
+    match /projects/{projectId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() && isRole('seller')
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.status == 'Pending';
+      
+      // Rule for purchase transaction: allow buyer to decrement tokens.
+      allow update: if isSignedIn() && (
+        // Allow project owner or admin to update their own project details
+        (isProjectOwner(projectId) || isRole('admin')) ||
+        // Allow a buyer to update ONLY the tokensAvailable field, and only to decrement it.
+        (
+          isRole('buyer') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tokensAvailable']) &&
+          request.resource.data.tokensAvailable == resource.data.tokensAvailable - request.get(/databases/$(database)/documents/transactions/$(request.id)).data.quantity
+        )
+      );
+    }
+    
+    // =====================================================================
+    //  ENERGY CREDITS Collection
+    //  - Anyone authenticated can read them for the marketplace.
+    //  - Writing is admin-only for this version.
+    // =====================================================================
+     match /energyCredits/{creditId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isRole('admin');
+    }
+
+    // =====================================================================
+    //  PORTFOLIO ASSETS Collection
+    //  - Users can only access their own portfolio assets.
+    // =====================================================================
+    match /portfolioAssets/{assetId} {
+      allow read, write: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+    }
+    
+    // =====================================================================
+    //  TRANSACTIONS Collection
+    //  - Users can create their own transaction records.
+    //  - Users can only read their own transactions.
+    // =====================================================================
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && get(path).data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+    }
+    
+    // =====================================================================
+    //  NOTIFICATIONS Collection
+    //  - Users can only read their own notifications.
+    //  - System/backend writes notifications (no client writes allowed for now).
+    // =====================================================================
+     match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false; // Only backend/functions can write notifications.
+    }
+    
+    // =====================================================================
+    //  DISPUTES Collection
+    //  - Users can create their own disputes.
+    //  - Users can read their own disputes.
+    //  - Admins/Sellers can read all disputes for review.
+    //  - Only Admins/Sellers can update dispute status.
+    // =====================================================================
+    match /disputes/{disputeId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRole('admin') || isRole('seller'));
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      allow update: if isSignedIn() && (isRole('admin') || isRole('seller'));
+    }
+    
+    // =====================================================================
+    //  PROPOSALS (Staking & Governance) Collection
+    //  - Any authenticated user can read proposals.
+    //  - Sellers can create proposals.
+    //  - Any authenticated user can vote (update vote counts).
+    // =====================================================================
+     match /proposals/{proposalId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isRole('seller') && isOwner(request.resource.data.proposerId);
+        
+        // Allow updating only vote counts
+        allow update: if isSignedIn() && 
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votesFor']) || 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votesAgainst']));
+    }
+    
+    // =====================================================================
+    //  DOCUMENTS Collection
+    //  - Sellers can upload (create) their own documents.
+    //  - Sellers can read their own documents.
+    //  - Admins can read all documents and update their status.
+    // =====================================================================
+    match /documents/{documentId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.ownerId) || isRole('admin'));
+      allow create: if isSignedIn() && isRole('seller') && isOwner(request.resource.data.ownerId);
+      allow update: if isSignedIn() && isRole('admin') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
   }
 }
