@@ -80,7 +80,6 @@ export default function ProfilePage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Account Details</CardTitle>
-                    <Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-3 items-center">
@@ -108,16 +107,6 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                    <p className="text-muted-foreground">Notification settings will be available here.</p>
-                </CardContent>
-            </Card>
-             <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Subscription</CardTitle>
-                    <CardDescription>Manage your subscription plan.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <p className="text-muted-foreground">Your current plan: <span className="font-bold text-primary">Free Tier</span></p>
-                   <Button variant="outline" className="mt-4">Upgrade to Pro</Button>
                 </CardContent>
             </Card>
           </div>
