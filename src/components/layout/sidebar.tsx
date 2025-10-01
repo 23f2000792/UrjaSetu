@@ -87,25 +87,17 @@ export function AppSidebar() {
           if (docSnap.exists()) {
             const userRole = docSnap.data().role;
             setRole(userRole);
-            localStorage.setItem('userRole', userRole); // Keep localStorage for non-reactive parts
           } else {
-            console.log("User document not found in Firestore, falling back to localStorage.");
-            const localRole = localStorage.getItem('userRole');
-            if (localRole) {
-              setRole(localRole);
-            }
+            console.log("User document not found in Firestore.");
+            setRole('buyer'); // Default to buyer if no role found
           }
         } catch (error) {
-            console.error("Error fetching user role, falling back to localStorage:", error);
-            const localRole = localStorage.getItem('userRole');
-            if (localRole) {
-              setRole(localRole);
-            }
+            console.error("Error fetching user role:", error);
+            setRole('buyer');
         }
       } else {
         setUser(null);
         setRole(null);
-        localStorage.removeItem('userRole');
       }
       setIsLoading(false);
     });

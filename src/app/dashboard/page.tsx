@@ -29,20 +29,12 @@ export default function DashboardPage() {
           if (docSnap.exists()) {
             setRole(docSnap.data().role);
           } else {
-            console.log("No such user document! Falling back to localStorage.");
-            // Fallback for simulation/permission errors
-            const localRole = localStorage.getItem('userRole');
-            if (localRole) {
-              setRole(localRole);
-            }
+            console.log("No such user document!");
+            setRole('buyer'); // Default to buyer if no role found
           }
         } catch (error) {
             console.error("Error getting user document:", error);
-            console.log("Falling back to localStorage due to error.");
-            const localRole = localStorage.getItem('userRole');
-            if (localRole) {
-              setRole(localRole);
-            }
+            setRole('buyer'); // Default to buyer on error
         }
       } else {
         // User is signed out

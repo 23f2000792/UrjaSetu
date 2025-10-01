@@ -11,13 +11,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, Zap } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Zap } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("buyer"); // Default role
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -28,11 +26,6 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // In a real app, the role would come from Firestore/claims,
-      // but for this simulation, we'll use the selected role.
-      // This is also a fallback for when firestore rules are not set.
-      localStorage.setItem('userRole', role);
-      
       toast({
         title: "Success",
         description: "Logged in successfully!",
@@ -40,7 +33,6 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
-      localStorage.removeItem('userRole');
       toast({
         title: "Login Failed",
         description: error.message || "An unexpected error occurred.",
@@ -100,20 +92,6 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
                 />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Select Role to Simulate</Label>
-                  <RadioGroup defaultValue="buyer" value={role} onValueChange={setRole} className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="buyer" id="buyer" />
-                      <Label htmlFor="buyer">Buyer</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="seller" id="seller" />
-                      <Label htmlFor="seller">Seller (Admin)</Label>
-                    </div>
-                  </RadioGroup>
-                  <p className='text-xs text-muted-foreground'>This is for simulation purposes. In a real app, your role is set.</p>
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
