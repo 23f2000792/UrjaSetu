@@ -94,9 +94,11 @@ export default function PortfolioPage() {
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={`/marketplace/${getAssetId(asset.id, asset.type)}`}>Details</Link>
+                            <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}`}>Details</Link>
                         </Button>
-                        <Button variant="outline" size="sm">Sell</Button>
+                        <Button variant="default" size="sm" asChild>
+                           <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}/sell`}>Sell</Link>
+                        </Button>
                     </div>
                   </TableCell>
                 </TableRow>

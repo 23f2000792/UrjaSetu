@@ -39,6 +39,7 @@ import {
   LogIn,
   Gavel,
   AreaChart,
+  Code,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +68,10 @@ const sellerNavItems = [
     { href: '/documents', icon: FileText, label: 'My Documents' },
 ];
 
+const sharedBottomNavItems = [
+  { href: '/api', icon: Code, label: 'Developer API' },
+];
+
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -88,12 +93,23 @@ export function AppSidebar() {
             const userRole = docSnap.data().role;
             setRole(userRole);
           } else {
-            console.log("User document not found in Firestore.");
-            setRole('buyer'); // Default to buyer if no role found
+             // Fallback for users created before Firestore role storage
+            const localRole = localStorage.getItem('userRole');
+            if (localRole) {
+                setRole(localRole);
+            } else {
+                console.log("User document not found and no local role.");
+                setRole('buyer'); // Default to buyer
+            }
           }
         } catch (error) {
-            console.error("Error fetching user role:", error);
-            setRole('buyer');
+            console.error("Error fetching user role, falling back to localStorage", error);
+            const localRole = localStorage.getItem('userRole');
+             if (localRole) {
+                setRole(localRole);
+            } else {
+                setRole('buyer'); // Default to buyer
+            }
         }
       } else {
         setUser(null);
@@ -109,7 +125,7 @@ export function AppSidebar() {
   const handleLogout = async () => {
     try {
       await firebaseSignOut(auth);
-      // user state will be updated by onAuthStateChanged listener
+      localStorage.removeItem('userRole');
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
@@ -178,6 +194,27 @@ export function AppSidebar() {
       <SidebarFooter className="mt-auto">
         {user ? (
           <>
+             {/* Shared Bottom Nav */}
+            <SidebarContent className="flex-grow-0">
+                <SidebarMenu>
+                     <SidebarSeparator />
+                     {sharedBottomNavItems.map((item) => (
+                        <SidebarMenuItem key={item.label}>
+                        <Link href={item.href}>
+                            <SidebarMenuButton
+                            isActive={isNavItemActive(item.href)}
+                            tooltip={item.label}
+                            className="justify-start"
+                            >
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                            </SidebarMenuButton>
+                        </Link>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarContent>
+
             {/* Expanded Footer */}
             <div className="group-data-[collapsible=icon]:hidden">
               <SidebarSeparator />
