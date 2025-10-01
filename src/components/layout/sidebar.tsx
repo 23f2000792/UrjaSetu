@@ -44,7 +44,7 @@ import {
 
 
 const navItems = [
-  { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/marketplace', icon: Store, label: 'Marketplace' },
   { href: '/portfolio', icon: Wallet, label: 'Portfolio' },
   { href: '/insights', icon: Lightbulb, label: 'AI Insights' },
@@ -67,9 +67,15 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const isNavItemActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
+    if (href === '/dashboard') return pathname === '/dashboard';
+    return pathname.startsWith(href) && href !== '/';
   };
+  
+  const isLandingPage = pathname === '/';
+  
+  if (isLandingPage) {
+    return null;
+  }
 
   return (
     <>
@@ -85,9 +91,8 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
-                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -106,9 +111,8 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
              {adminNavItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
-                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"

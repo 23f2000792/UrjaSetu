@@ -1,11 +1,20 @@
+
 "use client";
 
+import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import AppHeader from "@/components/layout/header";
 import React from "react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isLandingPage = pathname === '/';
+
+  if (isLandingPage) {
+    return <>{children}</>;
+  }
+
   return (
     <SidebarProvider>
         <Sidebar>
