@@ -1,102 +1,107 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Function to check if a user is authenticated
+  
+    // Helper function to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Function to check if the user is the owner of a document
+    // Helper function to check if the user is the owner of a document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    // Function to get user role
+    // Helper function to get the user's role
     function getRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
-    
-    function isSeller() {
-        return isAuthenticated() && getRole(request.auth.uid) == 'seller';
-    }
 
-    function isAdmin() {
-        return isAuthenticated() && getRole(request.auth.uid) == 'admin';
+    // Helper function to check if a user has a specific role
+    function hasRole(role) {
+      return isAuthenticated() && getRole(request.auth.uid) == role;
     }
 
     // Users Collection
-    // - Anyone can create their own user document (on signup)
-    // - Users can only read/update their own document
-    // - Authenticated users can read public fields of other users (for leaderboards, etc.)
+    // - Anyone can create their own user document on signup.
+    // - Users can only read/update their own data.
+    // - Public read is allowed for fields needed for leaderboards/profiles.
     match /users/{userId} {
       allow create: if isOwner(userId);
       allow read: if isAuthenticated();
       allow update: if isOwner(userId);
+      allow delete: if hasRole('admin'); // Only admins can delete user profiles
     }
 
-    // Projects Collection
-    // - Any authenticated user can read projects (marketplace)
-    // - Only sellers can create new projects
-    // - Only the owner of the project can update it (e.g. description)
-    // - Transactions can update tokensAvailable (see transactions rules)
+    // Projects Collection (Solar Farms)
+    // - Sellers can create new projects.
+    // - Anyone can read projects for the marketplace.
+    // - Only the owner seller or an admin can update project details.
+    // - Token purchases (decrementing tokensAvailable) are allowed within a transaction.
     match /projects/{projectId} {
-      allow read: if isAuthenticated();
-      allow create: if isSeller();
-      allow update: if isOwner(resource.data.ownerId);
+      allow read: if true;
+      allow create: if hasRole('seller');
+      allow update: if hasRole('admin') || (hasRole('seller') && resource.data.ownerId == request.auth.uid);
+    }
+    
+    // Energy Credits Collection
+    // - Only admins or sellers can create credits.
+    // - Anyone can read credits for the marketplace.
+    // - Only admins can update/delete.
+    match /energyCredits/{creditId} {
+      allow read: if true;
+      allow create: if hasRole('seller') || hasRole('admin');
+      allow update, delete: if hasRole('admin');
+    }
+
+    // Transactions Collection
+    // - Users can only create transactions for themselves.
+    // - Users can only read their own transactions.
+    // - Admins can read all transactions for oversight.
+    match /transactions/{transactionId} {
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if isOwner(resource.data.userId) || hasRole('admin');
+      // No updates/deletes to maintain a clear audit trail
+      allow update, delete: if false;
     }
     
     // Portfolio Assets Collection
-    // - Users can only create, read, update, or delete their own portfolio assets
+    // - Users can only manage their own portfolio assets.
+    // - This is typically handled within a transaction when buying/selling.
     match /portfolioAssets/{assetId} {
-      allow read, update, delete: if isAuthenticated() && assetId.startsWith(request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-    }
-    
-    // Transactions Collection
-    // - Users can create their own transactions (e.g., buying tokens)
-    // - Users can only read their own transactions
-    match /transactions/{transactionId} {
-        allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-        allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      // assetId is formatted as `userId_projectId`
+      allow read, create, update, delete: if isAuthenticated() && assetId.split('_')[0] == request.auth.uid;
     }
 
-    // Documents Collection (for KYC, etc.)
-    // - Users can create (upload) their own documents
-    // - Users can only read their own documents
-    // - Admins can read all documents and update their status for review
-    match /documents/{documentId} {
-      allow create: if isAuthenticated() && isOwner(request.resource.data.ownerId);
-      allow read: if isAuthenticated() && (isOwner(resource.data.ownerId) || isAdmin());
-      allow update: if isAdmin();
-    }
-    
     // Disputes Collection
-    // - Authenticated users can create their own disputes
-    // - Users can only read their own disputes
-    // - Admins and Sellers can read all disputes and update them
+    // - Authenticated users can create disputes for themselves.
+    // - Users can read their own disputes.
+    // - Admins and involved sellers can read/update disputes.
     match /disputes/{disputeId} {
-        allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-        allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || isSeller());
-        allow update: if isAdmin() || isSeller();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read, update: if isOwner(resource.data.userId) || hasRole('admin') || hasRole('seller');
     }
 
-    // Proposals Collection (Governance)
-    // - Any authenticated user can read proposals
-    // - Only sellers can create proposals
-    // - Any authenticated user can vote (update vote counts)
-    match /proposals/{proposalId} {
-      allow read: if isAuthenticated();
-      allow create: if isSeller();
-      allow update: if isAuthenticated(); // Allows for voting
+    // Documents Collection (for KYC, project verification)
+    // - Sellers can upload documents for themselves.
+    // - Only the owner or an admin can read the documents.
+    // - Only admins can change the status (approve/reject).
+    match /documents/{documentId} {
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if isOwner(resource.data.ownerId) || hasRole('admin');
+      allow update: if hasRole('admin');
+      allow delete: if isOwner(resource.data.ownerId) || hasRole('admin');
     }
     
-     // Energy Credits Collection
-    match /energyCredits/{creditId} {
-      allow read: if isAuthenticated();
-      // Add create/update rules if sellers/admins can create these later
+    // Governance Proposals Collection
+    // - Authenticated users (or just sellers/stakers) can create proposals.
+    // - Everyone can read proposals.
+    // - Voting (update) is allowed for authenticated users.
+    match /proposals/{proposalId} {
+      allow read: if true;
+      allow create: if hasRole('seller') || hasRole('admin');
+      allow update: if isAuthenticated(); // Allows for voting by incrementing counts
     }
   }
 }
