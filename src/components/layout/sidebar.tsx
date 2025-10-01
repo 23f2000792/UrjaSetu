@@ -80,6 +80,7 @@ export function AppSidebar() {
   const { toast } = useToast();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -91,8 +92,9 @@ export function AppSidebar() {
         try {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            const userRole = docSnap.data().role;
-            setRole(userRole);
+            const userData = docSnap.data();
+            setRole(userData.role);
+            setFullName(userData.fullName);
           } else {
              // Fallback for users created before Firestore role storage
             const localRole = localStorage.getItem('userRole');
@@ -102,6 +104,7 @@ export function AppSidebar() {
                 console.log("User document not found and no local role.");
                 setRole('buyer'); // Default to buyer
             }
+            setFullName(user.email); // Fallback to email
           }
         } catch (error) {
             console.error("Error fetching user role, falling back to localStorage", error);
@@ -111,10 +114,12 @@ export function AppSidebar() {
             } else {
                 setRole('buyer'); // Default to buyer
             }
+            setFullName(user.email); // Fallback to email
         }
       } else {
         setUser(null);
         setRole(null);
+        setFullName(null);
       }
       setIsLoading(false);
     });
@@ -147,14 +152,11 @@ export function AppSidebar() {
   };
   
   let navItems = userNavItems; // Default to buyer
-  let accountTypeLabel = 'Buyer';
 
   if (role === 'seller') {
       navItems = sellerNavItems;
-      accountTypeLabel = 'Solar Farm Owner';
   } else if (role === 'admin') {
       navItems = adminNavItems;
-      accountTypeLabel = 'Administrator';
   }
 
   if (isLoading) {
@@ -217,7 +219,7 @@ export function AppSidebar() {
                           <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium capitalize">{accountTypeLabel}</span>
+                          <span className="text-sm font-medium">{fullName}</span>
                           <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>
@@ -254,7 +256,7 @@ export function AppSidebar() {
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>{fullName}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                      <DropdownMenuItem asChild>
                       <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
