@@ -1,6 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, DollarSign, Users, Zap } from "lucide-react";
+import { Activity, Users, Zap } from "lucide-react";
+
+// Assuming Rupee icon is not available in lucide-react, using a simple string
+const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
 
 export function AdminStats() {
     return (
@@ -18,10 +21,10 @@ export function AdminStats() {
             <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CurrencyIcon />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">$1.2M</div>
+                <div className="text-2xl font-bold">Rs. 1.2Cr</div>
                 <p className="text-xs text-muted-foreground">+15% from last month</p>
             </CardContent>
             </Card>

@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export default function AssetCard({ project }: { project: SolarProject }) {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button className="w-full">
-            Trade at ${project.tokenPrice.toFixed(2)}
+            Trade at Rs. {project.tokenPrice.toFixed(2)}
         </Button>
       </CardFooter>
     </Card>

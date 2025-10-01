@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,9 +17,9 @@ export default function PortfolioPage() {
             asset.name,
             asset.type,
             asset.quantity,
-            `$${asset.purchasePrice.toFixed(2)}`,
-            `$${asset.currentValue.toFixed(2)}`,
-            `$${(asset.currentValue * asset.quantity).toFixed(2)}`
+            `Rs.${asset.purchasePrice.toFixed(2)}`,
+            `Rs.${asset.currentValue.toFixed(2)}`,
+            `Rs.${(asset.currentValue * asset.quantity).toFixed(2)}`
         ]);
 
         let csvContent = "data:text/csv;charset=utf-8," 
@@ -51,7 +52,7 @@ export default function PortfolioPage() {
           <CardDescription>The current market value of all your assets.</CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-4xl font-bold text-primary">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-4xl font-bold text-primary">Rs. {totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </CardContent>
       </Card>
 
@@ -78,9 +79,9 @@ export default function PortfolioPage() {
                   <TableCell className="font-medium">{asset.name}</TableCell>
                   <TableCell><Badge variant="secondary">{asset.type}</Badge></TableCell>
                   <TableCell className="text-right">{asset.quantity.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">${asset.purchasePrice.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">${asset.currentValue.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-medium">${(asset.currentValue * asset.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right">Rs. {asset.purchasePrice.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">Rs. {asset.currentValue.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">Rs. {(asset.currentValue * asset.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
                         <Button variant="outline" size="sm">Sell</Button>

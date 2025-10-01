@@ -1,13 +1,14 @@
+
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const activities = [
-  { id: 1, type: "Buy", asset: "Mojave Solar Park Tokens", amount: "+ 100", value: "$120.00", status: "Completed" },
-  { id: 2, type: "Sell", asset: "Rooftop Revolution ECTs", amount: "- 50", value: "$9.00", status: "Pending" },
-  { id: 3, type: "Staked", asset: "URJA", amount: "1,000", value: "$500.00", status: "Completed" },
-  { id: 4, type: "Reward", asset: "Staking Rewards", amount: "+ 5 URJA", value: "$2.50", status: "Completed" },
-  { id: 5, type: "Buy", asset: "Thar Desert Array ECTs", amount: "+ 500", value: "$60.00", status: "Completed" },
+  { id: 1, type: "Buy", asset: "Mojave Solar Park Tokens", amount: "+ 100", value: "Rs. 12,000", status: "Completed" },
+  { id: 2, type: "Sell", asset: "Rooftop Revolution ECTs", amount: "- 50", value: "Rs. 900", status: "Pending" },
+  { id: 3, type: "Staked", asset: "URJA", amount: "1,000", value: "Rs. 50,000", status: "Completed" },
+  { id: 4, type: "Reward", asset: "Staking Rewards", amount: "+ 5 URJA", value: "Rs. 250", status: "Completed" },
+  { id: 5, type: "Buy", asset: "Thar Desert Array ECTs", amount: "+ 500", value: "Rs. 6,000", status: "Completed" },
 ]
 
 export default function RecentActivity() {

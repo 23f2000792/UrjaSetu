@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export default function ECTCard({ credit }: { credit: EnergyCredit }) {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button className="w-full">
-            Buy at ${credit.price.toFixed(2)}/kWh
+            Buy at Rs. {credit.price.toFixed(2)}/kWh
         </Button>
       </CardFooter>
     </Card>
