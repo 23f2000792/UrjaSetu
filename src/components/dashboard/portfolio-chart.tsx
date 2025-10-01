@@ -5,9 +5,9 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recha
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, getDocs } from "firebase/firestore";
 import { type User } from "firebase/auth";
-import { type Transaction } from "@/lib/mock-data";
+import { type Transaction, type SolarProject } from "@/lib/mock-data";
 import { format, startOfMonth } from "date-fns";
 import { Skeleton } from "../ui/skeleton";
 
@@ -18,7 +18,11 @@ const chartConfig = {
   },
 }
 
-export default function PortfolioChart() {
+interface PortfolioChartProps {
+    role?: 'buyer' | 'seller';
+}
+
+export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -35,58 +39,98 @@ export default function PortfolioChart() {
     };
 
     setLoading(true);
-    const q = query(
-        collection(db, "transactions"), 
-        where("userId", "==", user.uid),
-        orderBy("timestamp", "asc")
-    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const transactions: Transaction[] = [];
-        snapshot.forEach(doc => {
-            transactions.push(doc.data() as Transaction);
-        });
+    if (role === 'seller') {
+        // --- SELLER LOGIC ---
+        const fetchSellerData = async () => {
+            // 1. Get seller's projects
+            const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+            const projectsSnapshot = await getDocs(projectsQuery);
+            const projectIds = projectsSnapshot.docs.map(doc => doc.id);
 
-        // Process transactions into monthly portfolio values
-        const monthlyData: { [key: string]: number } = {};
-        transactions.forEach(tx => {
-            if (tx.timestamp) {
-                const month = format(startOfMonth(tx.timestamp.toDate()), 'MMM yyyy');
-                if (!monthlyData[month]) {
-                    monthlyData[month] = 0;
-                }
-                 // Simplified logic: this just sums up transaction costs per month.
-                 // A real implementation would calculate portfolio value snapshots.
-                monthlyData[month] += tx.totalCost;
+            if (projectIds.length === 0) {
+                setData([{ month: "Jan", value: 0 }, { month: "Feb", value: 0 }, { month: "Mar", value: 0 }]);
+                setLoading(false);
+                return;
             }
+
+            // 2. Query transactions for those projects
+            const transactionsQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
+            const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+                const monthlyRevenue: { [key: string]: number } = {};
+                snapshot.forEach(doc => {
+                    const tx = doc.data() as Transaction;
+                    if (tx.timestamp) {
+                        const month = format(startOfMonth(tx.timestamp.toDate()), 'MMM yyyy');
+                        if (!monthlyRevenue[month]) {
+                            monthlyRevenue[month] = 0;
+                        }
+                        monthlyRevenue[month] += tx.totalCost;
+                    }
+                });
+
+                const chartData = Object.keys(monthlyRevenue).map(month => ({
+                    month: month.split(' ')[0],
+                    value: monthlyRevenue[month],
+                }));
+
+                setData(chartData.length > 0 ? chartData : [{ month: "Jan", value: 0 }, { month: "Feb", value: 0 }]);
+                setLoading(false);
+            });
+            return unsubscribe;
+        };
+        const unsubscribe = fetchSellerData();
+        return () => { unsubscribe.then(unsub => unsub && unsub()) };
+
+    } else {
+        // --- BUYER LOGIC (original logic) ---
+        const q = query(
+            collection(db, "transactions"), 
+            where("userId", "==", user.uid),
+            orderBy("timestamp", "asc")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const transactions: Transaction[] = [];
+            snapshot.forEach(doc => {
+                transactions.push(doc.data() as Transaction);
+            });
+
+            const monthlyData: { [key: string]: number } = {};
+            transactions.forEach(tx => {
+                if (tx.timestamp) {
+                    const month = format(startOfMonth(tx.timestamp.toDate()), 'MMM yyyy');
+                    if (!monthlyData[month]) {
+                        monthlyData[month] = 0;
+                    }
+                    monthlyData[month] += tx.totalCost;
+                }
+            });
+            
+            let runningTotal = 0;
+            const chartData = Object.keys(monthlyData).map(month => {
+                runningTotal += monthlyData[month];
+                return {
+                    month: month.split(' ')[0],
+                    value: runningTotal,
+                };
+            });
+
+            if (chartData.length === 0) {
+              setData([
+                { month: "Jan", value: 0 }, { month: "Feb", value: 0 }, { month: "Mar", value: 0 },
+                { month: "Apr", value: 0 }, { month: "May", value: 0 }, { month: "Jun", value: 0 }
+              ]);
+            } else {
+               setData(chartData);
+            }
+
+            setLoading(false);
         });
-        
-        // This is a simplified running total for demonstration
-        let runningTotal = 0;
-        const chartData = Object.keys(monthlyData).map(month => {
-            runningTotal += monthlyData[month];
-            return {
-                month: month.split(' ')[0], // Just the month name
-                value: runningTotal,
-            };
-        });
+        return () => unsubscribe();
+    }
 
-        if (chartData.length === 0) {
-          // Provide some default structure if no transactions exist
-          setData([
-            { month: "Jan", value: 0 }, { month: "Feb", value: 0 }, { month: "Mar", value: 0 },
-            { month: "Apr", value: 0 }, { month: "May", value: 0 }, { month: "Jun", value: 0 }
-          ]);
-        } else {
-           setData(chartData);
-        }
-
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [user]);
+  }, [user, role]);
 
   if (loading) {
     return <Skeleton className="h-[300px] w-full" />

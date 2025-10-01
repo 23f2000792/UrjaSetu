@@ -152,7 +152,7 @@ function UserDashboard({ user }: { user: User | null }) {
             <CardTitle>Portfolio Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <PortfolioChart />
+            <PortfolioChart role="buyer"/>
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
@@ -254,7 +254,7 @@ function SellerDashboard({ user }: { user: User | null }) {
             <CardDescription>An overview of token sales and revenue.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PortfolioChart />
+            <PortfolioChart role="seller" />
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
