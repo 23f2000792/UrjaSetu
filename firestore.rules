@@ -1,80 +1,15 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper functions to make rules more readable
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-
-    // Users can read anyone's profile for leaderboards/display
-    // but can only create/update their own.
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-    }
-
-    // Projects and Energy Credits are public to read for the marketplace
-    match /{path=**}/projects/{projectId} {
-        allow read: if isSignedIn();
-        allow create: if isRole('seller');
-        // Allow a buyer to update only the tokensAvailable field during a transaction
-        allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tokensAvailable']);
-        allow delete: if isRole('seller');
-    }
-    
-    match /energyCredits/{creditId} {
-        allow read: if isSignedIn();
-        allow create: if isRole('seller');
-        allow update: if isRole('seller');
-        allow delete: if isRole('seller');
-    }
-
-    // Users can only read/write their own portfolio assets
-    match /portfolioAssets/{assetId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-    }
-    
-    // Users can only read/write their own transactions
-    match /transactions/{transactionId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-    }
-
-    // Users can read/write their own disputes. Admin can read all.
-    match /disputes/{disputeId} {
-        allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRole('admin'));
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update: if isRole('admin');
-    }
-    
-    // All signed-in users can read proposals for voting. Sellers can create them.
-    match /proposals/{proposalId} {
-        allow read: if isSignedIn();
-        allow create: if isRole('seller');
-        // Allow any signed-in user to vote (update votesFor/votesAgainst)
-        allow update: if isSignedIn() && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votesFor', 'votesAgainst']));
-    }
-    
-    // Sellers can create documents. Admins can read/update them.
-    match /documents/{documentId} {
-        allow read: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isRole('admin'));
-        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-        allow update: if isRole('admin');
+    match /{document=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }
