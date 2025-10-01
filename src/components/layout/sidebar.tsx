@@ -64,16 +64,19 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton
-                  isActive={isNavItemActive(item.href)}
-                  tooltip={item.label}
-                  className="justify-start"
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
+                <Link href={item.href} passHref>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isNavItemActive(item.href)}
+                    tooltip={item.label}
+                    className="justify-start"
+                  >
+                    <span>
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </span>
+                  </SidebarMenuButton>
+                </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
