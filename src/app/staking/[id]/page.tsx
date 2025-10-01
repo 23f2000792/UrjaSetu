@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Check, ThumbsUp, ThumbsDown, X } from 'lucide-react';
+import { ArrowLeft, Check, ThumbsUp, ThumbsDown, X, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -156,6 +156,12 @@ export default function ProposalDetailPage() {
                                 <span className="font-medium">{totalVotes.toLocaleString()}</span>
                             </div>
                         </CardContent>
+                        <CardFooter>
+                            <Button variant="outline" className="w-full">
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Proposal (PDF)
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </div>
 
