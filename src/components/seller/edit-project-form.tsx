@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { type SolarProject } from "@/lib/mock-data";
-import { Loader2, Edit } from "lucide-react";
+import { Loader2, Edit, DollarSign, Zap } from "lucide-react";
 
 interface EditProjectFormProps {
     project: SolarProject;
@@ -28,6 +28,8 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
     const [panelType, setPanelType] = useState(project.panelType);
     const [description, setDescription] = useState(project.description);
     const [imageUrl, setImageUrl] = useState(project.imageUrl);
+    const [tokenPrice, setTokenPrice] = useState(project.tokenPrice.toString());
+    const [capacity, setCapacity] = useState(project.capacity.toString());
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,7 +43,9 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                 location,
                 panelType,
                 description,
-                imageUrl
+                imageUrl,
+                tokenPrice: Number(tokenPrice),
+                capacity: Number(capacity),
             });
 
             toast({
@@ -81,6 +85,22 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
                             <div className="space-y-2">
                                 <Label htmlFor="location">Location</Label>
                                 <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="tokenPrice">Price per Token</Label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input id="tokenPrice" type="number" value={tokenPrice} onChange={(e) => setTokenPrice(e.target.value)} className="pl-8"/>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="capacity">Capacity (kW)</Label>
+                                 <div className="relative">
+                                    <Zap className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input id="capacity" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="pl-8" />
+                                </div>
                             </div>
                         </div>
                         <div className="space-y-2">
