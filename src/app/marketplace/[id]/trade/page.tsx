@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CreditCard, ShieldCheck, Landmark, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function TradePage() {
     const params = useParams();
@@ -93,30 +95,82 @@ export default function TradePage() {
                         </CardContent>
                     </div>
                     <div className="p-6">
-                        <CardHeader className="p-0">
-                            <CardTitle className="flex items-center gap-2"><CreditCard /> Payment Details</CardTitle>
-                             <CardDescription>Enter your payment information below.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 pt-6 space-y-4">
-                             <div>
-                                <Label htmlFor="card-number">Card Number</Label>
-                                <Input id="card-number" placeholder="**** **** **** 1234" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="expiry">Expiry</Label>
-                                    <Input id="expiry" placeholder="MM/YY" />
-                                </div>
-                                <div>
-                                    <Label htmlFor="cvc">CVC</Label>
-                                    <Input id="cvc" placeholder="123" />
-                                </div>
-                            </div>
-                             <div>
-                                <Label htmlFor="name-on-card">Name on Card</Label>
-                                <Input id="name-on-card" placeholder="John Doe" />
-                            </div>
-                        </CardContent>
+                        <Tabs defaultValue="card" className="w-full">
+                             <TabsList className="grid w-full grid-cols-3 mb-6">
+                                <TabsTrigger value="card"><CreditCard className="mr-2 h-4 w-4"/>Card</TabsTrigger>
+                                <TabsTrigger value="netbanking"><Landmark className="mr-2 h-4 w-4"/>Net Banking</TabsTrigger>
+                                <TabsTrigger value="upi"><QrCode className="mr-2 h-4 w-4"/>UPI</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="card">
+                                <CardHeader className="p-0">
+                                    <CardTitle className="flex items-center gap-2 text-base">Card Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0 pt-6 space-y-4">
+                                    <div>
+                                        <Label htmlFor="card-number">Card Number</Label>
+                                        <Input id="card-number" placeholder="**** **** **** 1234" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="expiry">Expiry</Label>
+                                            <Input id="expiry" placeholder="MM/YY" />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="cvc">CVC</Label>
+                                            <Input id="cvc" placeholder="123" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="name-on-card">Name on Card</Label>
+                                        <Input id="name-on-card" placeholder="John Doe" />
+                                    </div>
+                                </CardContent>
+                            </TabsContent>
+
+                            <TabsContent value="netbanking">
+                                 <CardHeader className="p-0">
+                                    <CardTitle className="flex items-center gap-2 text-base">Select Bank</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0 pt-6 space-y-4">
+                                    <Select>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose your bank" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="sbi">State Bank of India</SelectItem>
+                                            <SelectItem value="hdfc">HDFC Bank</SelectItem>
+                                            <SelectItem value="icici">ICICI Bank</SelectItem>
+                                            <SelectItem value="axis">Axis Bank</SelectItem>
+                                            <SelectItem value="kotak">Kotak Mahindra Bank</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">You will be redirected to your bank's portal to complete the payment.</p>
+                                </CardContent>
+                            </TabsContent>
+
+                            <TabsContent value="upi">
+                                <CardHeader className="p-0">
+                                    <CardTitle className="flex items-center gap-2 text-base">UPI Payment</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0 pt-6 space-y-4">
+                                    <div>
+                                        <Label htmlFor="upi-id">UPI ID</Label>
+                                        <Input id="upi-id" placeholder="yourname@bank" />
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <Separator className="flex-1"/>
+                                        <span className="text-muted-foreground text-xs">OR</span>
+                                        <Separator className="flex-1"/>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center gap-2 text-center p-4 border-dashed border-2 rounded-lg">
+                                        <QrCode className="h-16 w-16 text-muted-foreground" />
+                                        <p className="text-sm text-muted-foreground">Scan QR code with your UPI app</p>
+                                    </div>
+                                </CardContent>
+                            </TabsContent>
+                        </Tabs>
+
                          <CardFooter className="flex-col items-stretch p-0 pt-6 gap-4">
                             <Button size="lg" onClick={handlePurchase}>
                                 Pay Rs. {totalCost.toFixed(2)}
