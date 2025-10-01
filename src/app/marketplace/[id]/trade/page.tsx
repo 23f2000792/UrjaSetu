@@ -8,12 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, ShieldCheck, Landmark, QrCode } from 'lucide-react';
+import { ArrowLeft, CreditCard, ShieldCheck, Landmark, QrCode, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function TradePage() {
     const params = useParams();
@@ -22,6 +31,9 @@ export default function TradePage() {
     const id = params.id as string;
 
     const [quantity, setQuantity] = useState(1);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
@@ -43,10 +55,13 @@ export default function TradePage() {
     const handlePurchase = () => {
         // Mock purchase logic
         toast({
-            title: "Purchase Successful!",
-            description: `You purchased ${quantity} ${unit} of ${name}.`,
+            title: "Processing Payment...",
+            description: `Attempting to purchase ${quantity} ${unit} of ${name}.`,
         });
-        router.push('/portfolio');
+
+        // Simulate a successful payment
+        setPurchaseSuccess(true);
+        setShowConfirmation(true);
     };
 
 
@@ -183,6 +198,43 @@ export default function TradePage() {
                     </div>
                 </div>
             </Card>
+
+            <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        {purchaseSuccess ? (
+                            <>
+                                <CheckCircle className="h-6 w-6 text-primary" />
+                                Payment Successful
+                            </>
+                        ) : (
+                            <>
+                                <XCircle className="h-6 w-6 text-destructive" />
+                                Payment Failed
+                            </>
+                        )}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {purchaseSuccess ? (
+                            <>
+                            Your purchase of <strong>{quantity} {unit}</strong> of <strong>{name}</strong> for <strong>Rs. {totalCost.toFixed(2)}</strong> was successful. The assets have been added to your portfolio.
+                            </>
+                        ) : (
+                            "There was an issue processing your payment. Please try again or use a different payment method."
+                        )}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogAction asChild>
+                       <Button onClick={() => router.push('/portfolio')} className="w-full">
+                            {purchaseSuccess ? 'View Portfolio' : 'Try Again'}
+                       </Button>
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
         </div>
     );
 }

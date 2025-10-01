@@ -7,6 +7,7 @@ import { portfolioAssets } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
+import Link from "next/link";
 
 export default function PortfolioPage() {
     const totalValue = portfolioAssets.reduce((acc, asset) => acc + (asset.currentValue * asset.quantity), 0);
@@ -33,6 +34,14 @@ export default function PortfolioPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    const getAssetId = (assetId: string, type: 'Project' | 'Credit') => {
+        if (type === 'Credit') {
+            // The mock ID for credits is `ec` + number, we need `credit-ec` + number for URL
+            return `credit-${assetId}`;
+        }
+        return assetId;
     }
 
   return (
@@ -84,6 +93,9 @@ export default function PortfolioPage() {
                   <TableCell className="text-right font-medium">Rs. {(asset.currentValue * asset.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/marketplace/${getAssetId(asset.id, asset.type)}`}>Details</Link>
+                        </Button>
                         <Button variant="outline" size="sm">Sell</Button>
                     </div>
                   </TableCell>
