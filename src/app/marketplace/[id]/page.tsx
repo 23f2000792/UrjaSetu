@@ -205,12 +205,10 @@ export default function AssetDetailPage() {
                     </Card>
 
                     <Button size="lg" className="w-full" asChild>
-                        <Link href={`/marketplace/${id}/trade`}>Buy Now</Link>
+                        <Link href={`/marketplace/${id}/trade`}>Trade Now</Link>
                     </Button>
                 </div>
             </div>
         </div>
     );
 }
-
-    

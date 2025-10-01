@@ -22,7 +22,7 @@ export default function LandingPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "projects"), limit(3));
+        const q = query(collection(db, "projects"), limit(12));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const projectsData: SolarProject[] = [];
             querySnapshot.forEach((doc) => {
@@ -212,9 +212,9 @@ export default function LandingPage() {
                         Browse a curated selection of high-impact solar energy projects from around the globe.
                     </p>
                 </div>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {loading ? (
-                        Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-96" />)
+                        Array.from({length: 12}).map((_, i) => <Skeleton key={i} className="h-96" />)
                     ) : (
                         projects.map((project) => (
                             <AssetCard key={project.id} project={project} />
@@ -265,6 +265,18 @@ export default function LandingPage() {
               &copy; {new Date().getFullYear()} UrjaSetu. All rights reserved.
             </p>
             <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+              <Link
+                href="#"
+                className="text-xs hover:underline underline-offset-4"
+              >
+                About Us
+              </Link>
+              <Link
+                href="#"
+                className="text-xs hover:underline underline-offset-4"
+              >
+                Contact
+              </Link>
               <Link
                 href="#"
                 className="text-xs hover:underline underline-offset-4"
