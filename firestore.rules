@@ -1,60 +1,56 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check user role
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Rules for the 'users' collection
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
     match /users/{userId} {
-      // Any authenticated user can read public user profiles
-      allow read: if request.auth != null;
-      // A user can create their own document upon signup
-      allow create: if request.auth.uid == userId;
-      // A user can only update their own document
-      allow update: if request.auth.uid == userId;
-      // Deleting users should be handled by a backend function for safety
-      allow delete: if false;
+      allow read;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
     }
 
-    // Rules for the 'documents' collection
-    match /documents/{documentId} {
-      // A user can only create documents for themselves
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      // A user can read their own documents. A seller can read any document for review.
-      allow read: if request.auth.uid == resource.data.ownerId || isRole('seller');
-      // A seller can update the status of a document
-      allow update: if isRole('seller');
-      // No one can delete documents directly to maintain records
-      allow delete: if false;
+    match /documents/{docId} {
+      allow create: if isAuthenticated();
+      allow read: if isOwner(request.resource.data.ownerId) || getRole() == 'seller';
+      allow update: if getRole() == 'seller';
     }
 
-    // Rules for the 'projects' collection
     match /projects/{projectId} {
-        // Any authenticated user can view projects
-        allow read: if request.auth != null;
-        // Only sellers can create projects
-        allow create: if isRole('seller') && request.auth.uid == request.resource.data.ownerId;
-        // Only the project owner can update their own project
-        allow update: if isRole('seller') && request.auth.uid == resource.data.ownerId;
-        // Deletion should be a privileged action
-        allow delete: if false;
+      allow read: if isAuthenticated();
+      allow create: if getRole() == 'seller';
+      allow update: if getRole() == 'seller' && isOwner(resource.data.ownerId);
+    }
+    
+    match /energyCredits/{creditId} {
+        allow read: if isAuthenticated();
+        allow create: if getRole() == 'seller';
     }
 
-    // Rules for the 'disputes' collection
     match /disputes/{disputeId} {
-        // Any authenticated user can create a dispute for themselves
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-        // A user can read their own disputes. Sellers can read all disputes.
-        allow read: if request.auth.uid == resource.data.userId || isRole('seller');
-        // Only sellers can update a dispute's status
-        allow update: if isRole('seller');
-        // No one should delete disputes
-        allow delete: if false;
+      allow create: if isAuthenticated();
+      allow read: if isOwner(resource.data.userId) || getRole() == 'seller';
+      allow update: if getRole() == 'seller';
+    }
+    
+    match /portfolioAssets/{assetId} {
+        allow read: if isAuthenticated() && isOwner(resource.data.userId);
+        allow create: if isAuthenticated(); // Typically done via a backend function
+        allow update: if isAuthenticated() && isOwner(resource.data.userId); // Also via backend
+    }
+    
+    match /proposals/{proposalId} {
+        allow read: if isAuthenticated();
     }
   }
 }
