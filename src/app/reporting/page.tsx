@@ -8,19 +8,13 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
-
-const energyData = [
-  { date: "2024-07-01", generated: 22, offset: 15 },
-  { date: "2024-07-02", generated: 35, offset: 24 },
-  { date: "2024-07-03", generated: 42, offset: 29 },
-  { date: "2024-07-04", generated: 38, offset: 26 },
-  { date: "2024-07-05", generated: 51, offset: 35 },
-  { date: "2024-07-06", generated: 45, offset: 31 },
-  { date: "2024-07-07", generated: 48, offset: 33 },
-];
+import { collection, onSnapshot, query, where, Timestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { User } from 'firebase/auth';
 
 const chartConfig = {
     generated: {
@@ -33,11 +27,73 @@ const chartConfig = {
     }
 }
 
+type ReportingData = {
+    date: string;
+    generated: number;
+    offset: number;
+}
+
 export default function ReportingPage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<ReportingData[]>([]);
     const [date, setDate] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 7),
+        from: subDays(new Date(), 30),
         to: new Date(),
     });
+
+    useEffect(() => {
+        const unsubscribeAuth = auth.onAuthStateChanged(setUser);
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!user || !date?.from) {
+            setLoading(false);
+            return;
+        };
+
+        setLoading(true);
+
+        const q = query(
+            collection(db, "transactions"),
+            where("userId", "==", user.uid),
+            where("timestamp", ">=", Timestamp.fromDate(date.from)),
+            where("timestamp", "<=", Timestamp.fromDate(date.to || date.from))
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const dailyData: {[key: string]: { generated: number, offset: number }} = {};
+
+            snapshot.forEach(doc => {
+                const transaction = doc.data();
+                const dateStr = format(transaction.timestamp.toDate(), "yyyy-MM-dd");
+                
+                if (!dailyData[dateStr]) {
+                    dailyData[dateStr] = { generated: 0, offset: 0 };
+                }
+                
+                // Example calculation: 1 token purchased = 120 kWh
+                const energy = transaction.quantity * 120;
+                dailyData[dateStr].generated += energy;
+                dailyData[dateStr].offset += energy * 0.707;
+            });
+
+            const formattedData = Object.keys(dailyData).map(date => ({
+                date,
+                generated: dailyData[date].generated,
+                offset: Math.round(dailyData[date].offset)
+            })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            setData(formattedData);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user, date]);
+
+    const totalGenerated = data.reduce((acc, item) => acc + item.generated, 0);
+    const totalOffset = data.reduce((acc, item) => acc + item.offset, 0);
 
   return (
     <div className="space-y-8">
@@ -95,7 +151,7 @@ export default function ReportingPage() {
                   <CardTitle className="flex items-center gap-2"><Zap /> Total Energy Generated</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-4xl font-bold text-primary">350 kWh</p>
+                  {loading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalGenerated.toLocaleString()} kWh</p>}
                   <p className="text-sm text-muted-foreground">in the selected period</p>
               </CardContent>
           </Card>
@@ -104,8 +160,8 @@ export default function ReportingPage() {
                   <CardTitle className="flex items-center gap-2"><Leaf /> Total Carbon Offset</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-4xl font-bold text-primary">245 kg CO₂e</p>
-                  <p className="text-sm text-muted-foreground">Equivalent to planting 4 trees</p>
+                  {loading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalOffset.toLocaleString()} kg CO₂e</p>}
+                  <p className="text-sm text-muted-foreground">Equivalent to planting {Math.round(totalOffset/58).toLocaleString()} trees</p>
               </CardContent>
           </Card>
       </div>
@@ -116,23 +172,35 @@ export default function ReportingPage() {
             <CardDescription>Energy generation and carbon offset over the selected period.</CardDescription>
         </CardHeader>
         <CardContent>
-             <ChartContainer config={chartConfig} className="h-[400px] w-full">
-                <BarChart data={energyData}>
-                    <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => format(new Date(value), "MMM d")}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="generated" fill="var(--color-generated)" radius={4} />
-                    <Bar dataKey="offset" fill="var(--color-offset)" radius={4} />
-                </BarChart>
-            </ChartContainer>
+            {loading ? (
+                <div className="h-[400px] w-full flex items-center justify-center">
+                    <Skeleton className="h-full w-full" />
+                </div>
+            ) : data.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                    <BarChart data={data}>
+                        <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => format(new Date(value), "MMM d")}
+                        />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar dataKey="generated" fill="var(--color-generated)" radius={4} />
+                        <Bar dataKey="offset" fill="var(--color-offset)" radius={4} />
+                    </BarChart>
+                </ChartContainer>
+            ) : (
+                <div className="h-[400px] w-full flex items-center justify-center text-muted-foreground">
+                    No data available for the selected period.
+                </div>
+            )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    

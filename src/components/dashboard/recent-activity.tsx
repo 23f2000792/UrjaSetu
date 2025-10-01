@@ -1,35 +1,62 @@
 
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { type Transaction } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Activity } from "lucide-react";
 
-const activities = [
-  { id: 1, type: "Buy", asset: "Mojave Solar Park Tokens", amount: "+ 100", value: "Rs. 12,000", status: "Completed" },
-  { id: 2, type: "Sell", asset: "Rooftop Revolution ECTs", amount: "- 50", value: "Rs. 900", status: "Pending" },
-  { id: 3, type: "Staked", asset: "URJA", amount: "1,000", value: "Rs. 50,000", status: "Completed" },
-  { id: 4, type: "Reward", asset: "Staking Rewards", amount: "+ 5 URJA", value: "Rs. 250", status: "Completed" },
-  { id: 5, type: "Buy", asset: "Thar Desert Array ECTs", amount: "+ 500", value: "Rs. 6,000", status: "Completed" },
-]
+interface RecentActivityProps {
+    activities: Transaction[];
+    loading: boolean;
+}
 
-export default function RecentActivity() {
+export default function RecentActivity({ activities, loading }: RecentActivityProps) {
   return (
     <ScrollArea className="h-[300px]">
         <Table>
-        <TableBody>
-            {activities.map((activity) => (
-            <TableRow key={activity.id}>
-                <TableCell>
-                    <div className="font-medium">{activity.asset}</div>
-                    <div className="text-sm text-muted-foreground">{activity.type}</div>
-                </TableCell>
-                <TableCell className="text-right">
-                    <div className={`font-medium ${activity.amount.startsWith('+') ? 'text-primary' : activity.amount.startsWith('-') ? 'text-destructive' : ''}`}>{activity.amount}</div>
-                    <div className="text-sm text-muted-foreground">{activity.value}</div>
-                </TableCell>
-            </TableRow>
-            ))}
-        </TableBody>
+            <TableBody>
+                {loading ? (
+                    Array.from({length: 3}).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell>
+                                <Skeleton className="h-5 w-24 mb-1" />
+                                <Skeleton className="h-4 w-12" />
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Skeleton className="h-5 w-16 ml-auto mb-1" />
+                                <Skeleton className="h-4 w-20 ml-auto" />
+                            </TableCell>
+                        </TableRow>
+                    ))
+                ) : activities.length > 0 ? (
+                    activities.map((activity) => (
+                        <TableRow key={activity.id}>
+                            <TableCell>
+                                <div className="font-medium">{activity.projectName}</div>
+                                <div className="text-sm text-muted-foreground">{activity.type}</div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className={`font-medium ${activity.type === 'Buy' ? 'text-primary' : 'text-destructive'}`}>
+                                    {activity.type === 'Buy' ? '+' : '-'} {activity.quantity}
+                                </div>
+                                <div className="text-sm text-muted-foreground">Rs. {activity.totalCost.toFixed(2)}</div>
+                            </TableCell>
+                        </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={2} className="h-24 text-center">
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                <Activity className="h-8 w-8" />
+                                No recent activity.
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
         </Table>
     </ScrollArea>
   )
 }
+
+    

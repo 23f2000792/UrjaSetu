@@ -1,11 +1,55 @@
+
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Gift, Star, Trophy } from "lucide-react";
 import { UserBadges } from "@/components/rewards/user-badges";
 import { Leaderboard } from "@/components/rewards/leaderboard";
 import { Input } from "@/components/ui/input";
+import { collection, onSnapshot, query, limit, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useState, useEffect } from 'react';
+import type { UserProfile } from "@/lib/mock-data";
+
 
 export default function RewardsPage() {
+  const [topTraders, setTopTraders] = useState<UserProfile[]>([]);
+  const [topOffsetters, setTopOffsetters] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // In a real-world scenario, this data would be aggregated in a separate collection
+    // via Firebase Functions for performance. For this demo, we query the users directly
+    // and sort them. This is not scalable for a large number of users.
+    
+    // Fetch top traders (mocked logic, as we don't have a volume field)
+    const tradersQuery = query(collection(db, "users"), limit(5));
+    const unsubTraders = onSnapshot(tradersQuery, (snapshot) => {
+      const users: UserProfile[] = [];
+      snapshot.forEach(doc => {
+        users.push({ ...doc.data(), id: doc.id, volume: Math.random() * 100000 } as UserProfile & { volume: number });
+      });
+      setTopTraders(users.sort((a: any, b: any) => b.volume - a.volume));
+    });
+
+    // Fetch top offsetters (mocked logic)
+     const offsettersQuery = query(collection(db, "users"), limit(5));
+    const unsubOffsetters = onSnapshot(offsettersQuery, (snapshot) => {
+      const users: UserProfile[] = [];
+      snapshot.forEach(doc => {
+        users.push({ ...doc.data(), id: doc.id, offset: Math.random() * 5000 } as UserProfile & { offset: number });
+      });
+      setTopOffsetters(users.sort((a: any, b: any) => b.offset - a.offset));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubTraders();
+      unsubOffsetters();
+    }
+  }, []);
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">Rewards & Gamification</h1>
@@ -52,9 +96,11 @@ export default function RewardsPage() {
             <CardDescription>See how you stack up against other users.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Leaderboard />
+            <Leaderboard topTraders={topTraders} topOffsetters={topOffsetters} loading={loading} />
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    

@@ -1,27 +1,54 @@
+
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import type { UserProfile } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const topTraders = [
-    { rank: 1, user: "CryptoKing", volume: 150000, avatar: PlaceHolderImages.find(p => p.id === 'trader1')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 2, user: "SolarQueen", volume: 125000, avatar: PlaceHolderImages.find(p => p.id === 'trader2')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 3, user: "WattWatcher", volume: 110000, avatar: PlaceHolderImages.find(p => p.id === 'trader3')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 4, user: "EcoInvestor", volume: 95000, avatar: PlaceHolderImages.find(p => p.id === 'trader4')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 5, user: "GridGuru", volume: 80000, avatar: PlaceHolderImages.find(p => p.id === 'trader5')?.imageUrl || '', imageHint: 'person portrait' },
-];
+interface LeaderboardProps {
+    topTraders: UserProfile[];
+    topOffsetters: UserProfile[];
+    loading: boolean;
+}
 
-const topOffsetters = [
-    { rank: 1, user: "CarbonSlayer", offset: 5000, avatar: PlaceHolderImages.find(p => p.id === 'offset1')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 2, user: "GreenGiant", offset: 4500, avatar: PlaceHolderImages.find(p => p.id === 'offset2')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 3, user: "PlanetProtector", offset: 4200, avatar: PlaceHolderImages.find(p => p.id === 'offset3')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 4, user: "RenewableRachel", offset: 3800, avatar: PlaceHolderImages.find(p => p.id === 'offset4')?.imageUrl || '', imageHint: 'person portrait' },
-    { rank: 5, user: "SolarSam", offset: 3500, avatar: PlaceHolderImages.find(p => p.id === 'offset5')?.imageUrl || '', imageHint: 'person portrait' },
-];
+export function Leaderboard({ topTraders, topOffsetters, loading }: LeaderboardProps) {
 
-export function Leaderboard() {
+    const renderTableRows = (users: UserProfile[], valueKey: 'volume' | 'offset', unit: string) => {
+        if (loading) {
+            return Array.from({length: 5}).map((_, i) => (
+                 <TableRow key={i}>
+                    <TableCell><Skeleton className="h-8 w-4" /></TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <Skeleton className="h-6 w-24" />
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                </TableRow>
+            ))
+        }
+        return users.map((user, index) => (
+             <TableRow key={user.id}>
+                <TableCell className="font-bold text-lg">{index + 1}</TableCell>
+                <TableCell>
+                    <div className="flex items-center gap-3">
+                        <Avatar>
+                            <AvatarImage src={(user as any).avatar} data-ai-hint="person portrait"/>
+                            <AvatarFallback>{(user as any).fullName.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{(user as any).fullName}</span>
+                    </div>
+                </TableCell>
+                <TableCell className="text-right">{(user as any)[valueKey].toLocaleString()} {unit}</TableCell>
+            </TableRow>
+        ))
+    }
+
+
   return (
     <Tabs defaultValue="traders" className="w-full">
       <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
@@ -34,25 +61,11 @@ export function Leaderboard() {
                 <TableRow>
                     <TableHead className="w-[50px]">Rank</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead className="text-right">Volume (USD)</TableHead>
+                    <TableHead className="text-right">Volume (Rs.)</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {topTraders.map(trader => (
-                    <TableRow key={trader.rank}>
-                        <TableCell className="font-bold text-lg">{trader.rank}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                                <Avatar>
-                                    <AvatarImage src={trader.avatar} data-ai-hint={trader.imageHint}/>
-                                    <AvatarFallback>{trader.user.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{trader.user}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right">${trader.volume.toLocaleString()}</TableCell>
-                    </TableRow>
-                ))}
+                {renderTableRows(topTraders, 'volume' as any, 'Rs.')}
             </TableBody>
         </Table>
       </TabsContent>
@@ -66,24 +79,12 @@ export function Leaderboard() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {topOffsetters.map(offsetter => (
-                    <TableRow key={offsetter.rank}>
-                        <TableCell className="font-bold text-lg">{offsetter.rank}</TableCell>
-                        <TableCell>
-                             <div className="flex items-center gap-3">
-                                <Avatar>
-                                    <AvatarImage src={offsetter.avatar} data-ai-hint={offsetter.imageHint}/>
-                                    <AvatarFallback>{offsetter.user.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{offsetter.user}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right">{offsetter.offset.toLocaleString()} kg</TableCell>
-                    </TableRow>
-                ))}
+                {renderTableRows(topOffsetters, 'offset' as any, 'kg')}
             </TableBody>
         </Table>
       </TabsContent>
     </Tabs>
   );
 }
+
+    

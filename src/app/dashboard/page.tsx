@@ -9,7 +9,8 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import type { PortfolioAsset, SolarProject } from '@/lib/mock-data';
+import type { PortfolioAsset, SolarProject, Transaction } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
@@ -62,21 +63,50 @@ export default function DashboardPage() {
 
 function UserDashboard({ user }: { user: User | null }) {
   const [portfolioValue, setPortfolioValue] = useState(0);
+  const [energyGenerated, setEnergyGenerated] = useState(0);
+  const [carbonOffset, setCarbonOffset] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        setLoading(false);
+        return;
+    };
+    
+    setLoading(true);
 
-    const q = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const portfolioQuery = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
+    const unsubPortfolio = onSnapshot(portfolioQuery, (querySnapshot) => {
       let totalValue = 0;
+      let totalEnergy = 0;
       querySnapshot.forEach((doc) => {
         const asset = doc.data() as PortfolioAsset;
         totalValue += asset.quantity * asset.currentValue;
+        // Assuming 1 token = 120kWh generated over its lifetime so far
+        totalEnergy += asset.quantity * 120; 
       });
       setPortfolioValue(totalValue);
+      setEnergyGenerated(totalEnergy);
+      // Assuming 1 kWh = 0.707 kg CO2e
+      setCarbonOffset(totalEnergy * 0.707);
+    });
+    
+    const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
+    const unsubTransactions = onSnapshot(transactionsQuery, (querySnapshot) => {
+        const transactionsData: Transaction[] = [];
+        querySnapshot.forEach((doc) => {
+            transactionsData.push({ id: doc.id, ...doc.data() } as Transaction);
+        });
+        setRecentTransactions(transactionsData.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
+        setLoading(false);
     });
 
-    return () => unsubscribe();
+
+    return () => {
+        unsubPortfolio();
+        unsubTransactions();
+    };
   }, [user]);
 
   return (
@@ -90,7 +120,7 @@ function UserDashboard({ user }: { user: User | null }) {
             <CurrencyIcon />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Rs. {portfolioValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+             {loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">Rs. {portfolioValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
             <p className="text-xs text-muted-foreground">+2.1% from last month</p>
           </CardContent>
         </Card>
@@ -100,8 +130,8 @@ function UserDashboard({ user }: { user: User | null }) {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234 kWh</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{energyGenerated.toLocaleString()} kWh</div>}
+            <p className="text-xs text-muted-foreground">Lifetime total from your assets</p>
           </CardContent>
         </Card>
         <Card>
@@ -110,8 +140,8 @@ function UserDashboard({ user }: { user: User | null }) {
             <Leaf className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">874 kg CO₂e</div>
-            <p className="text-xs text-muted-foreground">Equivalent to planting 15 trees</p>
+             {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{carbonOffset.toFixed(0)} kg CO₂e</div>}
+            <p className="text-xs text-muted-foreground">Equivalent to planting {Math.round(carbonOffset/58).toLocaleString()} trees</p>
           </CardContent>
         </Card>
       </div>
@@ -130,7 +160,7 @@ function UserDashboard({ user }: { user: User | null }) {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecentActivity />
+            <RecentActivity activities={recentTransactions} loading={loading} />
           </CardContent>
         </Card>
       </div>
@@ -182,7 +212,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">Rs. {totalRevenue.toLocaleString('en-IN')}</div>
+                     {loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">Rs. {totalRevenue.toLocaleString('en-IN')}</div>}
                     <p className="text-xs text-muted-foreground">+18.2% this month</p>
                 </CardContent>
             </Card>
@@ -192,7 +222,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                     <ListTree className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{activeProjectsCount}</div>
+                    {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{activeProjectsCount}</div>}
                      <p className="text-xs text-muted-foreground">{pendingProjectsCount} pending verification</p>
                 </CardContent>
             </Card>
@@ -202,7 +232,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                     <Zap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{energySold.toLocaleString()} kWh</div>
+                    {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{energySold.toLocaleString()} kWh</div>}
                     <p className="text-xs text-muted-foreground">in the last 30 days</p>
                 </CardContent>
             </Card>
@@ -212,7 +242,7 @@ function SellerDashboard({ user }: { user: User | null }) {
                     <Sun className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{(totalCapacity / 1000).toLocaleString()} MW</div>
+                    {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{(totalCapacity / 1000).toLocaleString()} MW</div>}
                     <p className="text-xs text-muted-foreground">Across all your projects</p>
                 </CardContent>
             </Card>
@@ -234,10 +264,12 @@ function SellerDashboard({ user }: { user: User | null }) {
             <CardDescription>A feed of recent token purchases.</CardDescription>
           </CardHeader>
           <CardContent>
-            <RecentActivity />
+            <RecentActivity activities={[]} loading={loading} />
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
+    

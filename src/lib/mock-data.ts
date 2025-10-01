@@ -2,7 +2,9 @@
 
 
 
+
 import { PlaceHolderImages } from './placeholder-images';
+import { Timestamp } from 'firebase/firestore';
 
 export type SolarProject = {
   id: string;
@@ -195,6 +197,32 @@ export const proposals: GovernanceProposal[] = [
     endDate: '2024-06-20',
   },
 ];
+
+
+export type Transaction = {
+  id: string;
+  userId: string;
+  projectId: string;
+  projectName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalCost: number;
+  type: 'Buy' | 'Sell';
+  status: 'Completed' | 'Pending' | 'Failed';
+  timestamp: Timestamp;
+}
+
+export type UserProfile = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  // These would be aggregated fields updated by a backend function
+  volume?: number;
+  offset?: number;
+  avatar?: string;
+};
+    
 
     
 
