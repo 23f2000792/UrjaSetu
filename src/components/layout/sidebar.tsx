@@ -33,7 +33,6 @@ import {
   User,
   LogOut,
   Trophy,
-  Bell,
   FileText,
   Shield,
   LogIn,
@@ -230,9 +229,8 @@ export function AppSidebar() {
                     <DropdownMenuItem asChild>
                       <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
@@ -261,9 +259,8 @@ export function AppSidebar() {
                      <DropdownMenuItem asChild>
                       <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                    <DropdownMenuItem asChild>
+                       <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
