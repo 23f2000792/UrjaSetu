@@ -1,0 +1,134 @@
+
+"use client"
+
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { solarProjects, energyCredits } from '@/lib/mock-data';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, CreditCard, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+
+export default function TradePage() {
+    const params = useParams();
+    const router = useRouter();
+    const { toast } = useToast();
+    const id = params.id as string;
+
+    const [quantity, setQuantity] = useState(1);
+
+    const isCredit = id.startsWith('credit-');
+    const assetId = isCredit ? id.replace('credit-', '') : id;
+
+    const asset = isCredit
+        ? energyCredits.find(c => c.id === assetId)
+        : solarProjects.find(p => p.id === assetId);
+
+    if (!asset) {
+        return <div>Asset not found</div>;
+    }
+    
+    const name = (asset as any).name || `${(asset as any).projectName} Credits`;
+    const price = (asset as any).tokenPrice || (asset as any).price;
+    const unit = isCredit ? 'kWh' : 'Token(s)';
+
+    const totalCost = quantity * price;
+
+    const handlePurchase = () => {
+        // Mock purchase logic
+        toast({
+            title: "Purchase Successful!",
+            description: `You purchased ${quantity} ${unit} of ${name}.`,
+        });
+        router.push('/portfolio');
+    };
+
+
+    return (
+        <div className="max-w-4xl mx-auto">
+            <Button asChild variant="outline" size="sm" className="mb-4">
+                <Link href={`/marketplace/${id}`}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Details
+                </Link>
+            </Button>
+        
+            <Card className="overflow-hidden">
+                <div className="grid md:grid-cols-[2fr_3fr]">
+                    <div className="p-6 bg-muted/30">
+                        <CardHeader className="p-0">
+                            <CardTitle className="text-primary text-xl">{name}</CardTitle>
+                            <CardDescription>You are purchasing {unit}.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 pt-6 space-y-4">
+                            <div>
+                                <Label htmlFor="quantity">Quantity</Label>
+                                <Input 
+                                    id="quantity" 
+                                    type="number" 
+                                    value={quantity}
+                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                    min="1"
+                                />
+                            </div>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Price / {isCredit ? 'kWh' : 'Token'}</span>
+                                    <span>Rs. {price.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Quantity</span>
+                                    <span>x {quantity}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex justify-between font-bold text-base">
+                                    <span>Total Cost</span>
+                                    <span>Rs. {totalCost.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </div>
+                    <div className="p-6">
+                        <CardHeader className="p-0">
+                            <CardTitle className="flex items-center gap-2"><CreditCard /> Payment Details</CardTitle>
+                             <CardDescription>Enter your payment information below.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 pt-6 space-y-4">
+                             <div>
+                                <Label htmlFor="card-number">Card Number</Label>
+                                <Input id="card-number" placeholder="**** **** **** 1234" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="expiry">Expiry</Label>
+                                    <Input id="expiry" placeholder="MM/YY" />
+                                </div>
+                                <div>
+                                    <Label htmlFor="cvc">CVC</Label>
+                                    <Input id="cvc" placeholder="123" />
+                                </div>
+                            </div>
+                             <div>
+                                <Label htmlFor="name-on-card">Name on Card</Label>
+                                <Input id="name-on-card" placeholder="John Doe" />
+                            </div>
+                        </CardContent>
+                         <CardFooter className="flex-col items-stretch p-0 pt-6 gap-4">
+                            <Button size="lg" onClick={handlePurchase}>
+                                Pay Rs. {totalCost.toFixed(2)}
+                            </Button>
+                             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                <ShieldCheck className="h-4 w-4 text-primary" />
+                                <span>Secure payment powered by Stripe.</span>
+                            </div>
+                        </CardFooter>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+}

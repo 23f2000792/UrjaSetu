@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { solarProjects, energyCredits } from "@/lib/mock-data";
 import AssetCard from "@/components/marketplace/asset-card";
