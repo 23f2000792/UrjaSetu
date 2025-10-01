@@ -287,15 +287,6 @@ export default function TradePage() {
                                         <Label htmlFor="upi-id">UPI ID</Label>
                                         <Input id="upi-id" placeholder="yourname@bank" disabled={isPurchasing}/>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <Separator className="flex-1"/>
-                                        <span className="text-muted-foreground text-xs">OR</span>
-                                        <Separator className="flex-1"/>
-                                    </div>
-                                    <div className="flex flex-col items-center justify-center gap-2 text-center p-4 border-dashed border-2 rounded-lg">
-                                        <QrCode className="h-16 w-16 text-muted-foreground" />
-                                        <p className="text-sm text-muted-foreground">Scan QR code with your UPI app</p>
-                                    </div>
                                 </CardContent>
                             </TabsContent>
                         </Tabs>
@@ -338,5 +329,3 @@ export default function TradePage() {
         </div>
     );
 }
-
-    
