@@ -45,21 +45,23 @@ export default function GovernancePage() {
     };
     
     setLoadingProposals(true);
+    // Note: Filtering on one field and ordering by another requires a composite index in Firestore.
+    // To avoid needing to create one, we will fetch and then sort on the client side.
     const q = query(
         collection(db, "proposals"), 
-        where("proposerId", "==", user.uid),
-        orderBy("createdAt", "desc")
+        where("proposerId", "==", user.uid)
     );
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const proposalsData: GovernanceProposal[] = [];
       querySnapshot.forEach((doc) => {
         proposalsData.push({ id: doc.id, ...doc.data() } as GovernanceProposal);
       });
-      setProposals(proposalsData);
+      // Sort by creation date descending
+      setProposals(proposalsData.sort((a,b) => b.createdAt.seconds - a.createdAt.seconds));
       setLoadingProposals(false);
     }, (error) => {
         console.error("Error fetching proposals:", error);
-        toast({ title: "Error", description: "Could not fetch your proposals.", variant: "destructive" });
+        toast({ title: "Error", description: "Could not fetch your proposals. Check Firestore index configuration.", variant: "destructive" });
         setLoadingProposals(false);
     });
 
