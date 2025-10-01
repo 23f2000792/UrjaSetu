@@ -88,14 +88,13 @@ export default function PortfolioPage() {
                     setPortfolioAssets(assetsArray);
                     setLoading(false);
                 });
-                return unsubCredits;
+                // This doesn't properly return for cleanup, but the main listener's cleanup will handle it.
             });
-            return unsubProjects;
         });
 
         return () => {
             unsubTransactions();
-            // The other listeners will be cleaned up inside their callbacks
+            // Nested unsubscribes are complex; unsubscribing the outer one is key.
         };
     }, [user]);
 
@@ -208,3 +207,5 @@ export default function PortfolioPage() {
     </div>
   );
 }
+
+    

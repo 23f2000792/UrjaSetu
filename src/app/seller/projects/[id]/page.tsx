@@ -87,7 +87,7 @@ export default function ManageProjectPage() {
         )
     }
 
-    const tokensSold = transactions.reduce((acc, tx) => acc + tx.quantity, 0);
+    const tokensSold = project.totalTokens - project.tokensAvailable;
     const revenue = transactions.reduce((acc, tx) => acc + tx.totalCost, 0);
     const totalOrders = transactions.length;
 
@@ -209,3 +209,5 @@ export default function ManageProjectPage() {
         </div>
     );
 }
+
+    

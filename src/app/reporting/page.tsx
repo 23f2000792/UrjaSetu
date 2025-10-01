@@ -52,6 +52,7 @@ export default function ReportingPage() {
     useEffect(() => {
         if (!user || !date?.from) {
             setLoading(false);
+            setData([]);
             return;
         };
 
@@ -88,6 +89,9 @@ export default function ReportingPage() {
             })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             
             setData(formattedData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching reporting data: ", error);
             setLoading(false);
         });
 
@@ -234,3 +238,5 @@ export default function ReportingPage() {
     </div>
   );
 }
+
+    

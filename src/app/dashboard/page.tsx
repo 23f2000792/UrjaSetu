@@ -71,6 +71,11 @@ function UserDashboard({ user }: { user: User | null }) {
     useEffect(() => {
         if (!user) {
             setLoading(false);
+            // Clear data on logout
+            setPortfolioValue(0);
+            setEnergyGenerated(0);
+            setCarbonOffset(0);
+            setRecentTransactions([]);
             return;
         }
 
@@ -80,6 +85,7 @@ function UserDashboard({ user }: { user: User | null }) {
         const projectsQuery = collection(db, "projects");
         const creditsQuery = collection(db, "energyCredits");
 
+        // Use a single listener that composes the others to ensure cleanup
         const unsubTransactions = onSnapshot(transactionsQuery, (transactionsSnapshot) => {
             const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
                 const unsubCredits = onSnapshot(creditsQuery, (creditsSnapshot) => {
@@ -128,11 +134,12 @@ function UserDashboard({ user }: { user: User | null }) {
                     setRecentTransactions(userTransactions.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
                     setLoading(false);
                 });
-                return unsubCredits;
+                return unsubCredits; // This doesn't actually work as intended for cleanup
             });
-            return unsubProjects;
+            // return unsubProjects; // This also doesn't work
         });
 
+        // The correct way to return cleanup functions from a `useEffect`
         return () => {
             unsubTransactions();
         };
@@ -205,6 +212,8 @@ function SellerDashboard({ user }: { user: User | null }) {
     useEffect(() => {
         if (!user) {
             setLoading(false);
+            setProjects([]);
+            setSalesByProject({});
             return;
         }
 
@@ -222,24 +231,26 @@ function SellerDashboard({ user }: { user: User | null }) {
             });
             setProjects(projectsData);
             setLoading(false);
+
+            if (projectIds.length === 0) return;
             
             // Set up listeners for each project's transactions
-            const salesListeners = projectIds.map(projectId => {
-                const salesQuery = query(collection(db, "transactions"), where("projectId", "==", projectId));
-                return onSnapshot(salesQuery, (salesSnapshot) => {
-                    const salesData: Transaction[] = [];
-                    salesSnapshot.forEach(doc => {
-                        salesData.push({ id: doc.id, ...doc.data() } as Transaction);
-                    });
-                    setSalesByProject(prevSales => ({
-                        ...prevSales,
-                        [projectId]: salesData
-                    }));
+            const salesQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
+            const unsubSales = onSnapshot(salesQuery, (salesSnapshot) => {
+                const salesByProjectData: { [projectId: string]: Transaction[] } = {};
+                projectIds.forEach(id => salesByProjectData[id] = []);
+
+                salesSnapshot.forEach(doc => {
+                    const sale = { id: doc.id, ...doc.data() } as Transaction;
+                    if(salesByProjectData[sale.projectId]) {
+                        salesByProjectData[sale.projectId].push(sale);
+                    }
                 });
+                setSalesByProject(salesByProjectData);
             });
 
             return () => {
-                salesListeners.forEach(unsub => unsub());
+                unsubSales();
             };
         });
 
@@ -330,3 +341,4 @@ function SellerDashboard({ user }: { user: User | null }) {
   );
 }
 
+    

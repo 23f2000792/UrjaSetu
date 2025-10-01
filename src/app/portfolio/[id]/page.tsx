@@ -33,20 +33,31 @@ export default function PortfolioAssetDetailPage() {
     const assetId = isCredit ? id.replace('credit-', '') : id; // This is the raw asset ID (e.g., sp1)
     
     useEffect(() => {
-        if (!assetId || !user) return;
+        if (!assetId || !user) {
+            setLoading(false);
+            setMarketAsset(null);
+            setPortfolioInfo(null);
+            return;
+        };
 
-        const fetchMarketAsset = async () => {
+        let marketAssetUnsubscribe: () => void = () => {};
+        let transactionsUnsubscribe: () => void = () => {};
+
+        const fetchMarketAsset = () => {
             const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
             const marketDocRef = doc(db, marketCollectionName, assetId);
-            const marketDocSnap = await getDoc(marketDocRef);
-            if (marketDocSnap.exists()) {
-                setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
-            }
+            marketAssetUnsubscribe = onSnapshot(marketDocRef, (marketDocSnap) => {
+                if (marketDocSnap.exists()) {
+                    setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
+                } else {
+                    setMarketAsset(null);
+                }
+            });
         };
 
         const subscribeToTransactions = () => {
             const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId));
-            const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+            transactionsUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
                 let totalQuantity = 0;
                 let totalCost = 0;
                 snapshot.forEach(doc => {
@@ -68,14 +79,16 @@ export default function PortfolioAssetDetailPage() {
                 }
                 setLoading(false);
             });
-            return unsubscribe;
         };
 
         setLoading(true);
         fetchMarketAsset();
-        const unsubTransactions = subscribeToTransactions();
+        subscribeToTransactions();
 
-        return () => unsubTransactions();
+        return () => {
+            marketAssetUnsubscribe();
+            transactionsUnsubscribe();
+        };
     }, [assetId, isCredit, user]);
 
     if (loading) {
@@ -184,3 +197,5 @@ export default function PortfolioAssetDetailPage() {
         </div>
     );
 }
+
+    
