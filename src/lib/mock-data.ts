@@ -1,5 +1,6 @@
 
 
+
 import { PlaceHolderImages } from './placeholder-images';
 
 export type SolarProject = {
@@ -16,6 +17,7 @@ export type SolarProject = {
   panelType: string;
   totalTokens: number;
   tokensAvailable: number;
+  price?: number; // for compatibility with EnergyCredit
 };
 
 export const solarProjects: SolarProject[] = [
@@ -191,3 +193,5 @@ export const proposals: GovernanceProposal[] = [
     endDate: '2024-06-20',
   },
 ];
+
+    

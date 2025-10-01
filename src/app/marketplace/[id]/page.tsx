@@ -2,25 +2,64 @@
 "use client"
 
 import { useParams } from 'next/navigation';
-import { solarProjects, energyCredits } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Zap, MapPin, TrendingUp, FileText, CheckCircle, Package, Download } from 'lucide-react';
 import Link from 'next/link';
-import PortfolioChart from '@/components/dashboard/portfolio-chart'; // Reusing for demo
+import PortfolioChart from '@/components/dashboard/portfolio-chart';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AssetDetailPage() {
     const params = useParams();
     const id = params.id as string;
+    const [loading, setLoading] = useState(true);
+    const [asset, setAsset] = useState<SolarProject | EnergyCredit | null>(null);
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
+    const collectionName = isCredit ? 'energyCredits' : 'projects';
+
+    useEffect(() => {
+        if (!assetId) return;
+        const fetchAsset = async () => {
+            setLoading(true);
+            const docRef = doc(db, collectionName, assetId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                setAsset({ id: docSnap.id, ...docSnap.data() } as SolarProject | EnergyCredit);
+            } else {
+                console.log("No such document!");
+            }
+            setLoading(false);
+        };
+        fetchAsset();
+    }, [assetId, collectionName]);
     
-    const asset = isCredit 
-        ? energyCredits.find(c => c.id === assetId) 
-        : solarProjects.find(p => p.id === assetId);
+    if (loading) {
+        return (
+             <div className="space-y-8">
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-10 w-64" />
+                <div className="grid lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card><CardContent className="p-0"><Skeleton className="w-full h-[450px] rounded-t-lg" /></CardContent></Card>
+                        <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-20 w-full" /></CardContent></Card>
+                    </div>
+                    <div className="space-y-8">
+                         <Card><CardHeader><Skeleton className="h-8 w-40" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-full" /></CardContent></Card>
+                         <Skeleton className="h-12 w-full" />
+                    </div>
+                 </div>
+            </div>
+        );
+    }
 
     if (!asset) {
         return (
@@ -37,8 +76,8 @@ export default function AssetDetailPage() {
         );
     }
 
-    const project = isCredit ? null : asset as typeof solarProjects[0];
-    const credit = isCredit ? asset as typeof energyCredits[0] : null;
+    const project = isCredit ? null : asset as SolarProject;
+    const credit = isCredit ? asset as EnergyCredit : null;
 
     const name = project?.name || `${credit?.projectName} Credits`;
 
@@ -173,3 +212,5 @@ export default function AssetDetailPage() {
         </div>
     );
 }
+
+    

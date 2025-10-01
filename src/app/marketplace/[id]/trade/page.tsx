@@ -1,9 +1,8 @@
 
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { solarProjects, energyCredits } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit } from '@/lib/mock-data';
 
 export default function TradePage() {
     const params = useParams();
@@ -33,14 +35,33 @@ export default function TradePage() {
     const [quantity, setQuantity] = useState(1);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-
+    const [asset, setAsset] = useState<SolarProject | EnergyCredit | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
+    const collectionName = isCredit ? 'energyCredits' : 'projects';
 
-    const asset = isCredit
-        ? energyCredits.find(c => c.id === assetId)
-        : solarProjects.find(p => p.id === assetId);
+    useEffect(() => {
+        if (!assetId) return;
+        const fetchAsset = async () => {
+            setLoading(true);
+            const docRef = doc(db, collectionName, assetId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                setAsset({ id: docSnap.id, ...docSnap.data() } as SolarProject | EnergyCredit);
+            } else {
+                console.log("No such document!");
+            }
+            setLoading(false);
+        };
+        fetchAsset();
+    }, [assetId, collectionName]);
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
 
     if (!asset) {
         return <div>Asset not found</div>;
@@ -238,3 +259,5 @@ export default function TradePage() {
         </div>
     );
 }
+
+    

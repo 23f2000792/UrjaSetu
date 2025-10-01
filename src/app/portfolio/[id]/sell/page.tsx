@@ -1,9 +1,8 @@
 
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { solarProjects, energyCredits, portfolioAssets } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,8 +11,9 @@ import { ArrowLeft, Lock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
 
 export default function SellPage() {
     const params = useParams();
@@ -34,15 +35,43 @@ export default function SellPage() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
+    const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
 
-    const marketAsset = isCredit
-        ? energyCredits.find(c => c.id === assetId)
-        : solarProjects.find(p => p.id === assetId);
+     useEffect(() => {
+        if (!assetId) return;
 
-    const portfolioAsset = portfolioAssets.find(a => a.id === assetId);
+        const fetchAssets = async () => {
+            setLoading(true);
+            
+            // Fetch portfolio asset
+            const portfolioDocRef = doc(db, "portfolioAssets", assetId);
+            const portfolioDocSnap = await getDoc(portfolioDocRef);
+            if (portfolioDocSnap.exists()) {
+                setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
+            }
+
+            // Fetch market asset
+            const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
+            const marketDocRef = doc(db, marketCollectionName, assetId);
+            const marketDocSnap = await getDoc(marketDocRef);
+            if (marketDocSnap.exists()) {
+                setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
+            }
+
+            setLoading(false);
+        };
+
+        fetchAssets();
+    }, [assetId, isCredit]);
+    
+    if (loading) {
+        return <div>Loading...</div>;
+    }
 
     if (!marketAsset || !portfolioAsset) {
         return <div>Asset not found in your portfolio.</div>;
@@ -196,3 +225,4 @@ export default function SellPage() {
     );
 }
 
+    

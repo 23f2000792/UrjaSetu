@@ -7,8 +7,9 @@ import { Zap, Leaf, ShieldAlert, DollarSign, ListTree } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import type { PortfolioAsset } from '@/lib/mock-data';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
@@ -55,11 +56,29 @@ export default function DashboardPage() {
   }
   
   // Default to UserDashboard if role is 'buyer' or not set (for fallback)
-  return <UserDashboard />;
+  return <UserDashboard user={user} />;
 }
 
 
-function UserDashboard() {
+function UserDashboard({ user }: { user: User | null }) {
+  const [portfolioValue, setPortfolioValue] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let totalValue = 0;
+      querySnapshot.forEach((doc) => {
+        const asset = doc.data() as PortfolioAsset;
+        totalValue += asset.quantity * asset.currentValue;
+      });
+      setPortfolioValue(totalValue);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
@@ -71,7 +90,7 @@ function UserDashboard() {
             <CurrencyIcon />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Rs. 12,45,000.00</div>
+            <div className="text-2xl font-bold">Rs. {portfolioValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground">+2.1% from last month</p>
           </CardContent>
         </Card>
@@ -161,8 +180,8 @@ function SellerDashboard() {
                     <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">2</div>
-                    <p className="text-xs text-muted-foreground">awaiting review</p>
+                    <div className="text-2xl font-bold">0</div>
+                    <p className="text-xs text-muted-foreground">No documents awaiting review</p>
                 </CardContent>
             </Card>
       </div>
@@ -190,3 +209,5 @@ function SellerDashboard() {
     </div>
   );
 }
+
+    

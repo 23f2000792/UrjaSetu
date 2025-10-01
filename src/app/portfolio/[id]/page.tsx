@@ -2,26 +2,57 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
-import { solarProjects, energyCredits, portfolioAssets } from '@/lib/mock-data';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Zap, TrendingUp, PieChart, Wallet, ShoppingCart, Send } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { SolarProject, EnergyCredit, PortfolioAsset } from '@/lib/mock-data';
 
 export default function PortfolioAssetDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
+    const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
+    const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
     
-    const marketAsset = isCredit 
-        ? energyCredits.find(c => c.id === assetId) 
-        : solarProjects.find(p => p.id === assetId);
+    useEffect(() => {
+        if (!assetId) return;
 
-    const portfolioAsset = portfolioAssets.find(a => a.id === assetId);
+        const fetchAssets = async () => {
+            setLoading(true);
+            
+            // Fetch portfolio asset
+            const portfolioDocRef = doc(db, "portfolioAssets", assetId);
+            const portfolioDocSnap = await getDoc(portfolioDocRef);
+            if (portfolioDocSnap.exists()) {
+                setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
+            }
+
+            // Fetch market asset
+            const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
+            const marketDocRef = doc(db, marketCollectionName, assetId);
+            const marketDocSnap = await getDoc(marketDocRef);
+            if (marketDocSnap.exists()) {
+                setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
+            }
+
+            setLoading(false);
+        };
+
+        fetchAssets();
+    }, [assetId, isCredit]);
+
+    if (loading) {
+        return <div>Loading asset details...</div>;
+    }
 
     if (!marketAsset || !portfolioAsset) {
         return (
@@ -29,10 +60,10 @@ export default function PortfolioAssetDetailPage() {
                 <h1 className="text-2xl font-bold">Asset not found</h1>
                 <p className="text-muted-foreground mt-2">The asset you are looking for is not in your portfolio.</p>
                 <Button asChild variant="outline" className="mt-4" onClick={() => router.back()}>
-                    <Link href="/portfolio">
+                    <span className="cursor-pointer flex items-center">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Portfolio
-                    </Link>
+                    </span>
                 </Button>
             </div>
         );
@@ -124,3 +155,5 @@ export default function PortfolioAssetDetailPage() {
         </div>
     );
 }
+
+    

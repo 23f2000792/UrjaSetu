@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { proposals } from "@/lib/mock-data";
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+import type { GovernanceProposal } from '@/lib/mock-data';
 
 
 export default function StakingPage() {
@@ -22,6 +24,22 @@ export default function StakingPage() {
   const [isUnstaking, setIsUnstaking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const { toast } = useToast();
+  const [proposals, setProposals] = useState<GovernanceProposal[]>([]);
+  const [loadingProposals, setLoadingProposals] = useState(true);
+
+  useEffect(() => {
+    setLoadingProposals(true);
+    const unsub = onSnapshot(collection(db, "proposals"), (snapshot) => {
+        const proposalsData: GovernanceProposal[] = [];
+        snapshot.forEach((doc) => {
+            proposalsData.push({ id: doc.id, ...doc.data() } as GovernanceProposal);
+        });
+        setProposals(proposalsData);
+        setLoadingProposals(false);
+    });
+
+    return () => unsub();
+  }, []);
 
   const handleStake = () => {
     const amount = parseFloat(stakeAmount);
@@ -151,7 +169,13 @@ export default function StakingPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {proposals.map(proposal => (
+                    {loadingProposals ? (
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">
+                                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                            </TableCell>
+                        </TableRow>
+                    ) : proposals.map(proposal => (
                         <TableRow key={proposal.id}>
                             <TableCell className="text-muted-foreground">{proposal.id}</TableCell>
                             <TableCell className="font-medium">{proposal.title}</TableCell>
@@ -176,3 +200,5 @@ export default function StakingPage() {
     </div>
   );
 }
+
+    

@@ -1,15 +1,50 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { portfolioAssets } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import type { PortfolioAsset } from '@/lib/mock-data';
+import type { User } from 'firebase/auth';
 
 export default function PortfolioPage() {
+    const [portfolioAssets, setPortfolioAssets] = useState<PortfolioAsset[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+            setUser(user);
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        const q = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const assets: PortfolioAsset[] = [];
+            querySnapshot.forEach((doc) => {
+                assets.push({ id: doc.id, ...doc.data() } as PortfolioAsset);
+            });
+            setPortfolioAssets(assets);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
     const totalValue = portfolioAssets.reduce((acc, asset) => acc + (asset.currentValue * asset.quantity), 0);
 
     const handleDownload = () => {
@@ -61,7 +96,11 @@ export default function PortfolioPage() {
           <CardDescription>The current market value of all your assets.</CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-4xl font-bold text-primary">Rs. {totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            {loading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            ) : (
+                <p className="text-4xl font-bold text-primary">Rs. {totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            )}
         </CardContent>
       </Card>
 
@@ -83,26 +122,32 @@ export default function PortfolioPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {portfolioAssets.map((asset) => (
-                <TableRow key={asset.id}>
-                  <TableCell className="font-medium">{asset.name}</TableCell>
-                  <TableCell><Badge variant="secondary">{asset.type}</Badge></TableCell>
-                  <TableCell className="text-right">{asset.quantity.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">Rs. {asset.purchasePrice.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">Rs. {asset.currentValue.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-medium">Rs. {(asset.currentValue * asset.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex gap-2 justify-center">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}`}>Details</Link>
-                        </Button>
-                        <Button variant="default" size="sm" asChild>
-                           <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}/sell`}>Sell</Link>
-                        </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {loading ? (
+                <TableRow><TableCell colSpan={7} className="text-center h-24">Loading your assets...</TableCell></TableRow>
+              ) : portfolioAssets.length > 0 ? (
+                portfolioAssets.map((asset) => (
+                    <TableRow key={asset.id}>
+                    <TableCell className="font-medium">{asset.name}</TableCell>
+                    <TableCell><Badge variant="secondary">{asset.type}</Badge></TableCell>
+                    <TableCell className="text-right">{asset.quantity.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">Rs. {asset.purchasePrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">Rs. {asset.currentValue.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium">Rs. {(asset.currentValue * asset.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}`}>Details</Link>
+                            </Button>
+                            <Button variant="default" size="sm" asChild>
+                               <Link href={`/portfolio/${getAssetId(asset.id, asset.type)}/sell`}>Sell</Link>
+                            </Button>
+                        </div>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                 <TableRow><TableCell colSpan={7} className="text-center h-24">You do not own any assets yet.</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -110,3 +155,5 @@ export default function PortfolioPage() {
     </div>
   );
 }
+
+    
