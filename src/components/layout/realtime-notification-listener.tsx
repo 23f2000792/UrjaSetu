@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 
