@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { auth, db } from '@/lib/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import {
   AlertDialog,
@@ -38,18 +38,26 @@ export default function SellPage() {
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
     const [portfolioAsset, setPortfolioAsset] = useState<PortfolioAsset | null>(null);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
 
      useEffect(() => {
-        if (!assetId) return;
+        if (!assetId || !user) return;
 
         const fetchAssets = async () => {
             setLoading(true);
             
             // Fetch portfolio asset
-            const portfolioDocRef = doc(db, "portfolioAssets", assetId);
+            const portfolioDocRef = doc(db, "portfolioAssets", `${user.uid}_${assetId}`);
             const portfolioDocSnap = await getDoc(portfolioDocRef);
             if (portfolioDocSnap.exists()) {
                 setPortfolioAsset({ id: portfolioDocSnap.id, ...portfolioDocSnap.data() } as PortfolioAsset);
@@ -67,7 +75,7 @@ export default function SellPage() {
         };
 
         fetchAssets();
-    }, [assetId, isCredit]);
+    }, [assetId, isCredit, user]);
     
     if (loading) {
         return <div>Loading...</div>;
@@ -84,7 +92,6 @@ export default function SellPage() {
     const totalValue = quantity * price;
 
     const handleSell = async () => {
-        const user = auth.currentUser;
         if (!user || !user.email) {
             toast({ title: "Error", description: "You must be logged in to sell assets.", variant: "destructive" });
             return;
@@ -224,5 +231,3 @@ export default function SellPage() {
         </div>
     );
 }
-
-    

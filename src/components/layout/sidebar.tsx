@@ -64,10 +64,13 @@ const userNavItems = [
 const sellerNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/seller/projects', icon: Briefcase, label: 'My Projects' },
+    { href: '/seller/documents', icon: FileText, label: 'My Documents'},
     { href: '/seller/disputes', icon: Gavel, label: 'Dispute Management' },
 ];
 
-const sharedBottomNavItems = [
+const adminNavItems = [
+    { href: '/admin/disputes', icon: Gavel, label: 'Disputes' },
+    { href: '/admin/documents', icon: Shield, label: 'Documents' },
 ];
 
 
@@ -139,12 +142,23 @@ export function AppSidebar() {
   };
 
   const isNavItemActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/dashboard') return pathname === href || (pathname.startsWith('/seller') && href === '/dashboard');
     if (href === '/') return pathname === '/';
+    // For nested routes like /seller/projects, we want the /seller parent to be active.
+    // However, the current logic is fine for exact matches or startsWith.
     return pathname.startsWith(href);
   };
   
-  const navItems = role === 'seller' ? sellerNavItems : userNavItems;
+  let navItems = userNavItems; // Default to buyer
+  let accountTypeLabel = 'Buyer';
+
+  if (role === 'seller') {
+      navItems = sellerNavItems;
+      accountTypeLabel = 'Solar Farm Owner';
+  } else if (role === 'admin') {
+      navItems = adminNavItems;
+      accountTypeLabel = 'Administrator';
+  }
 
   if (isLoading) {
     return (
@@ -193,27 +207,6 @@ export function AppSidebar() {
       <SidebarFooter className="mt-auto">
         {user ? (
           <>
-             {/* Shared Bottom Nav */}
-            <SidebarContent className="flex-grow-0">
-                <SidebarMenu>
-                     <SidebarSeparator />
-                     {sharedBottomNavItems.map((item) => (
-                        <SidebarMenuItem key={item.label}>
-                        <Link href={item.href}>
-                            <SidebarMenuButton
-                            isActive={isNavItemActive(item.href)}
-                            tooltip={item.label}
-                            className="justify-start"
-                            >
-                            <item.icon className="h-5 w-5 flex-shrink-0" />
-                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </SidebarContent>
-
             {/* Expanded Footer */}
             <div className="group-data-[collapsible=icon]:hidden">
               <SidebarSeparator />
@@ -227,7 +220,7 @@ export function AppSidebar() {
                           <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium capitalize">{role === 'seller' ? 'Solar Farm Owner' : 'Buyer'}</span>
+                          <span className="text-sm font-medium capitalize">{accountTypeLabel}</span>
                           <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                         </div>
                       </div>
