@@ -72,7 +72,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
@@ -97,7 +97,7 @@ export function AppSidebar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="w-full justify-start gap-2 p-2 h-auto">
-                      <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
                           <AvatarFallback>U</AvatarFallback>

@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { portfolioAssets } from "@/lib/mock-data";
@@ -8,11 +10,35 @@ import { Download } from "lucide-react";
 export default function PortfolioPage() {
     const totalValue = portfolioAssets.reduce((acc, asset) => acc + (asset.currentValue * asset.quantity), 0);
 
+    const handleDownload = () => {
+        const headers = ["Asset", "Type", "Quantity", "Avg. Purchase Price", "Current Value", "Total Value"];
+        const rows = portfolioAssets.map(asset => [
+            asset.name,
+            asset.type,
+            asset.quantity,
+            `$${asset.purchasePrice.toFixed(2)}`,
+            `$${asset.currentValue.toFixed(2)}`,
+            `$${(asset.currentValue * asset.quantity).toFixed(2)}`
+        ]);
+
+        let csvContent = "data:text/csv;charset=utf-8," 
+            + headers.join(",") + "\n" 
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "portfolio_report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-primary">My Portfolio</h1>
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleDownload}>
           <Download className="mr-2 h-4 w-4" />
           Download Report
         </Button>
