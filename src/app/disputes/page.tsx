@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserDisputeList, Dispute } from "@/components/disputes/user-dispute-list";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -93,7 +93,7 @@ export default function DisputesPage() {
             return;
         }
 
-        await addDoc(collection(db, "disputes"), {
+        const disputeDocRef = await addDoc(collection(db, "disputes"), {
             userId: user.uid,
             userEmail: user.email,
             transactionId: transaction.id,
@@ -103,6 +103,19 @@ export default function DisputesPage() {
             status: "New",
             createdAt: serverTimestamp(),
         });
+        
+        // Create notification for the seller
+        const notificationRef = doc(collection(db, 'notifications'));
+        await setDoc(notificationRef, {
+            userId: transaction.sellerId, // Notify the seller
+            type: 'dispute',
+            title: 'New Dispute Filed',
+            description: `A dispute has been filed by ${user.email} for project ${transaction.projectName}.`,
+            timestamp: serverTimestamp(),
+            isRead: false,
+            disputeId: disputeDocRef.id,
+        });
+
         toast({ title: "Success", description: "Your dispute has been filed." });
         setSelectedTransaction("");
         setDetails("");
@@ -169,5 +182,3 @@ export default function DisputesPage() {
     </div>
   );
 }
-
-    

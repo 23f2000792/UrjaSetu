@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter }from 'next/navigation';
-import { doc, getDoc, Timestamp, collection, addDoc, query, onSnapshot, orderBy, updateDoc } from "firebase/firestore";
+import { doc, getDoc, Timestamp, collection, addDoc, query, onSnapshot, orderBy, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,8 +109,22 @@ export default function DisputeDetailPage() {
     };
 
     const handleStatusUpdate = async (status: 'Resolved' | 'Under Review') => {
+        if (!dispute) return;
         try {
             await updateDoc(doc(db, "disputes", id), { status });
+            
+            // Create notification for the buyer
+            const notificationRef = doc(collection(db, 'notifications'));
+            await setDoc(notificationRef, {
+                userId: dispute.userId, // Notify the buyer
+                type: 'dispute-update',
+                title: 'Dispute Status Updated',
+                description: `The status of your dispute case has been updated to "${status}".`,
+                timestamp: serverTimestamp(),
+                isRead: false,
+                disputeId: id,
+            });
+
             toast({ title: "Status Updated", description: `Dispute marked as ${status}.` });
         } catch (error) {
             console.error("Error updating status:", error);
@@ -310,5 +324,3 @@ export default function DisputeDetailPage() {
         </div>
     );
 }
-
-    
