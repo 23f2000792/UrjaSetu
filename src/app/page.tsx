@@ -70,14 +70,9 @@ export default function LandingPage() {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Button asChild size="lg">
-                    <Link href="/signup">
-                      Sign Up
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                  </Button>
-                   <Button asChild size="lg" variant="outline">
                     <Link href="/marketplace">
-                      Connect Wallet
+                      Explore Marketplace
+                      <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
                 </div>
@@ -266,25 +261,25 @@ export default function LandingPage() {
             </p>
             <nav className="sm:ml-auto flex gap-4 sm:gap-6">
               <Link
-                href="#"
+                href="/about"
                 className="text-xs hover:underline underline-offset-4"
               >
                 About Us
               </Link>
               <Link
-                href="#"
+                href="/contact"
                 className="text-xs hover:underline underline-offset-4"
               >
                 Contact
               </Link>
               <Link
-                href="#"
+                href="/terms"
                 className="text-xs hover:underline underline-offset-4"
               >
                 Terms of Service
               </Link>
               <Link
-                href="#"
+                href="/privacy"
                 className="text-xs hover:underline underline-offset-4"
               >
                 Privacy
