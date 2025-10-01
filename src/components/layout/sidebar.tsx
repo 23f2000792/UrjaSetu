@@ -82,15 +82,12 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.label}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton
-                  asChild
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
                 >
-                  <>
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </>
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -105,15 +102,12 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.label}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton
-                  asChild
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
                 >
-                  <>
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </>
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -127,7 +121,7 @@ export function AppSidebar() {
           <>
             {/* Expanded Footer */}
             <div className="group-data-[collapsible=icon]:hidden">
-              <Separator className="my-2" />
+              <SidebarSeparator />
               <div className="p-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -169,7 +163,7 @@ export function AppSidebar() {
 
             {/* Collapsed Footer */}
             <div className="hidden group-data-[collapsible=icon]:block">
-              <Separator className="my-2" />
+              <SidebarSeparator />
               <div className="p-2 flex justify-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
