@@ -25,6 +25,8 @@ import {
   LogOut,
   Gift,
   Code,
+  Bell,
+  LogIn,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,6 +47,8 @@ const navItems = [
   { href: '/rewards', icon: Gift, label: 'Rewards' },
   { href: '/api', icon: Code, label: 'API' },
 ];
+
+const isAuthenticated = false; // Mock authentication state
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -84,77 +88,95 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">
-        {/* Expanded Footer */}
-        <div className="group-data-[collapsible=icon]:hidden">
-          <Separator className="my-2" />
-          <div className="p-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2 p-2 h-auto">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+        {isAuthenticated ? (
+          <>
+            {/* Expanded Footer */}
+            <div className="group-data-[collapsible=icon]:hidden">
+              <Separator className="my-2" />
+              <div className="p-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start gap-2 p-2 h-auto">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
+                          <AvatarFallback>U</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm font-medium">User Name</span>
+                          <span className="text-xs text-muted-foreground">user@email.com</span>
+                        </div>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Collapsed Footer */}
+            <div className="hidden group-data-[collapsible=icon]:block">
+              <Separator className="my-2" />
+              <div className="p-2 flex justify-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="h-8 w-8 cursor-pointer">
                       <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
                       <AvatarFallback>U</AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium">User Name</span>
-                      <span className="text-xs text-muted-foreground">user@email.com</span>
-                    </div>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                     <DropdownMenuItem asChild>
+                      <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="p-2 group-data-[collapsible=icon]:hidden">
+             <Separator className="my-2" />
+            <Link href="/profile" passHref>
+              <Button className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                Login
+              </Button>
+            </Link>
           </div>
-        </div>
-
-        {/* Collapsed Footer */}
-        <div className="hidden group-data-[collapsible=icon]:block">
-          <Separator className="my-2" />
-          <div className="p-2 flex justify-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="h-8 w-8 cursor-pointer">
-                  <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
-                  <AvatarFallback>U</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        )}
       </SidebarFooter>
     </>
   );
