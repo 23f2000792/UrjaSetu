@@ -87,6 +87,7 @@ function AdminDashboard() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Marketplace Performance</CardTitle>
+            <CardDescription>An overview of trading volume and activity.</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Placeholder for a more detailed admin-specific chart */}
@@ -96,6 +97,7 @@ function AdminDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Platform Activity</CardTitle>
+            <CardDescription>A feed of recent user actions.</CardDescription>
           </CardHeader>
           <CardContent>
              {/* Placeholder for admin-specific activity feed */}

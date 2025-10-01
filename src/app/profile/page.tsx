@@ -1,12 +1,15 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, LogIn } from "lucide-react";
+import { ShieldCheck, LogIn, Crown, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 export default function ProfilePage() {
-  const isAuthenticated = false; // Mock authentication state
+  const isAuthenticated = true; // Mock authentication state
 
   return (
     <div className="space-y-8">
@@ -14,7 +17,7 @@ export default function ProfilePage() {
       
       {isAuthenticated ? (
         <div className="grid gap-8 md:grid-cols-3">
-          <div className="md:col-span-1">
+          <div className="md:col-span-1 space-y-8">
             <Card>
               <CardContent className="pt-6 flex flex-col items-center space-y-4">
                 <Avatar className="h-24 w-24">
@@ -28,9 +31,19 @@ export default function ProfilePage() {
                 <Button variant="outline">Edit Profile</Button>
               </CardContent>
             </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Crown /> Subscription</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p>You are on the <span className="font-semibold text-primary">Free Tier</span>.</p>
+                    <p className="text-sm text-muted-foreground">Upgrade to Premium for advanced analytics, early access to new projects, and lower fees.</p>
+                    <Button className="w-full">Upgrade to Premium</Button>
+                </CardContent>
+            </Card>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Account Details</CardTitle>
@@ -60,6 +73,43 @@ export default function ProfilePage() {
                 </Card>
               </CardContent>
             </Card>
+
+             <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Bell /> Notification Settings</CardTitle>
+                <CardDescription>Choose how you want to be notified.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="email-notifications" className="flex flex-col gap-1">
+                        <span>Email Notifications</span>
+                        <span className="text-xs font-normal text-muted-foreground">Receive updates via email.</span>
+                    </Label>
+                    <Switch id="email-notifications" defaultChecked />
+                </div>
+                <Separator />
+                 <div className="flex items-center justify-between">
+                    <Label htmlFor="push-notifications" className="flex flex-col gap-1">
+                        <span>Push Notifications</span>
+                        <span className="text-xs font-normal text-muted-foreground">Get alerts on your devices.</span>
+                    </Label>
+                    <Switch id="push-notifications" />
+                </div>
+                 <Separator />
+                <div className="space-y-2 pt-2">
+                    <p className="font-medium text-sm">Alerts</p>
+                     <div className="flex items-center justify-between pl-4">
+                        <Label htmlFor="trade-alerts" className="font-normal">Trade confirmations</Label>
+                        <Switch id="trade-alerts" defaultChecked/>
+                    </div>
+                     <div className="flex items-center justify-between pl-4">
+                        <Label htmlFor="listing-alerts" className="font-normal">New project listings</Label>
+                        <Switch id="listing-alerts" defaultChecked/>
+                    </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       ) : (

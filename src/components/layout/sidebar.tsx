@@ -39,6 +39,7 @@ import {
   Shield,
   LogIn,
   Gavel,
+  AreaChart,
 } from 'lucide-react';
 
 
@@ -49,6 +50,7 @@ const navItems = [
   { href: '/insights', icon: Lightbulb, label: 'AI Insights' },
   { href: '/staking', icon: Coins, label: 'Staking' },
   { href: '/rewards', icon: Gift, label: 'Rewards' },
+  { href: '/reporting', icon: AreaChart, label: 'Reporting' },
   { href: '/documents', icon: FileText, label: 'Documents' },
   { href: '/disputes', icon: Gavel, label: 'Disputes' },
   { href: '/api', icon: Code, label: 'API' },
@@ -59,7 +61,7 @@ const adminNavItems = [
     { href: '/admin/disputes', icon: Gavel, label: 'Dispute Management' },
 ]
 
-const isAuthenticated = false; // Mock authentication state
+const isAuthenticated = true; // Mock authentication state
 
 export function AppSidebar() {
   const pathname = usePathname();
