@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, serverTimestamp, runTransaction, DocumentReference } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit, Transaction } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
@@ -79,32 +79,53 @@ export default function TradePage() {
         setIsPurchasing(true);
         
         try {
-            const price = (asset as any).tokenPrice || (asset as any).price;
-            const sellerId = (asset as SolarProject).ownerId;
+            await runTransaction(db, async (transaction) => {
+                const projectRef = doc(db, collectionName, assetId);
+                const projectDoc = await transaction.get(projectRef);
 
-            // Create a transaction document. A backend function would listen to this collection.
-            const transactionData: Omit<Transaction, 'id'> = {
-                userId: user.uid,
-                sellerId: sellerId,
-                projectId: assetId,
-                projectName: (asset as any).name || (asset as any).projectName,
-                quantity: quantity,
-                pricePerUnit: price,
-                totalCost: quantity * price,
-                type: 'Buy',
-                status: 'Pending', // Status is pending until backend processes it.
-                timestamp: serverTimestamp() as any
-            };
+                if (!projectDoc.exists()) {
+                    throw "Project does not exist!";
+                }
 
-            await addDoc(collection(db, "transactions"), transactionData);
-            
+                const currentProjectData = projectDoc.data() as SolarProject;
+                const availableTokens = currentProjectData.tokensAvailable;
+
+                if (availableTokens < quantity) {
+                    throw `Not enough tokens available. Only ${availableTokens} left.`;
+                }
+                
+                const price = currentProjectData.tokenPrice || (currentProjectData as any).price;
+                const sellerId = currentProjectData.ownerId;
+
+                // Update the project's available tokens
+                transaction.update(projectRef, {
+                    tokensAvailable: availableTokens - quantity
+                });
+                
+                // Create a new transaction document
+                const transactionRef = doc(collection(db, "transactions"));
+                const transactionData: Omit<Transaction, 'id'> = {
+                    userId: user.uid,
+                    sellerId: sellerId,
+                    projectId: assetId,
+                    projectName: currentProjectData.name,
+                    quantity: quantity,
+                    pricePerUnit: price,
+                    totalCost: quantity * price,
+                    type: 'Buy',
+                    status: 'Completed', // Can be processed immediately
+                    timestamp: serverTimestamp() as any
+                };
+                transaction.set(transactionRef, transactionData);
+            });
+
             setShowConfirmation(true);
 
         } catch (e: any) {
             console.error("Purchase failed: ", e);
             toast({
                 title: "Purchase Failed",
-                description: e.message || "Could not complete the purchase. Please check permissions.",
+                description: typeof e === 'string' ? e : (e.message || "Could not complete the purchase. Please check permissions or try again."),
                 variant: "destructive",
             });
         } finally {
@@ -192,10 +213,10 @@ export default function TradePage() {
                     <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <CheckCircle className="h-6 w-6 text-primary" />
-                        Purchase Submitted
+                        Purchase Successful
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Your purchase of <strong>{quantity} {unit}</strong> of <strong>{name}</strong> for <strong>Rs. {totalCost.toFixed(2)}</strong> has been submitted for processing. The assets will appear in your portfolio shortly.
+                        Your purchase of <strong>{quantity} {unit}</strong> of <strong>{name}</strong> for <strong>Rs. {totalCost.toFixed(2)}</strong> has been completed. The assets will now appear in your portfolio.
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
