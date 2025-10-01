@@ -7,7 +7,7 @@ import { Menu, Sun } from "lucide-react";
 export default function AppHeader() {
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:hidden">
-            <SidebarTrigger asChild>
+            <SidebarTrigger>
                 <Button variant="ghost" size="icon">
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">Toggle Sidebar</span>
