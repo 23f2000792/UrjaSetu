@@ -7,33 +7,61 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ArrowLeft, ThumbsUp, ThumbsDown, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { GovernanceProposal } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 export default function SellerProposalDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const { toast } = useToast();
     const id = params.id as string;
     
     const [proposal, setProposal] = useState<GovernanceProposal | null>(null);
     const [loading, setLoading] = useState(true);
+    const [newStatus, setNewStatus] = useState<string>("");
 
     useEffect(() => {
       if (!id) return;
       setLoading(true);
       const unsub = getDoc(doc(db, "proposals", id)).then(docSnap => {
           if (docSnap.exists()) {
-              setProposal({ id: docSnap.id, ...docSnap.data()} as GovernanceProposal);
+              const data = { id: docSnap.id, ...docSnap.data()} as GovernanceProposal;
+              setProposal(data);
+              setNewStatus(data.status);
           } else {
               console.log("No such document!");
           }
           setLoading(false);
       });
     }, [id]);
+
+    const handleStatusUpdate = async () => {
+        if (!newStatus || newStatus === proposal?.status) return;
+
+        const proposalRef = doc(db, "proposals", id);
+        try {
+            await updateDoc(proposalRef, { status: newStatus });
+            setProposal(prev => prev ? { ...prev, status: newStatus as any } : null);
+            toast({
+                title: "Status Updated",
+                description: `Proposal status has been changed to ${newStatus}.`,
+            });
+        } catch (error) {
+            console.error("Error updating status:", error);
+            toast({
+                title: "Update Failed",
+                description: "Could not update proposal status.",
+                variant: "destructive",
+            });
+        }
+    };
 
 
     if (loading) {
@@ -133,6 +161,29 @@ export default function SellerProposalDetailPage() {
                 </div>
 
                 <div className="space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Manage Proposal</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Update Status</Label>
+                                <Select onValueChange={setNewStatus} value={newStatus}>
+                                    <SelectTrigger id="status">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Active">Active</SelectItem>
+                                        <SelectItem value="Passed">Passed</SelectItem>
+                                        <SelectItem value="Failed">Failed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={handleStatusUpdate} className="w-full" disabled={newStatus === proposal.status}>
+                                <Edit className="mr-2 h-4 w-4" /> Save Status
+                            </Button>
+                        </CardContent>
+                    </Card>
                     <Card>
                         <CardHeader>
                             <CardTitle>Details</CardTitle>
