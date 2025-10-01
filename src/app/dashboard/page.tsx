@@ -28,8 +28,12 @@ export default function DashboardPage() {
   if (role === 'seller') {
     return <AdminDashboard />;
   }
+  
+  if (role === 'buyer') {
+    return <UserDashboard />;
+  }
 
-  return <UserDashboard />;
+  return <div>Loading dashboard...</div>;
 }
 
 
