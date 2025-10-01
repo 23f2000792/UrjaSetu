@@ -8,13 +8,29 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 
+interface MarketplaceFiltersProps {
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
+    sortOption: string;
+    setSortOption: (option: string) => void;
+}
 
-export function MarketplaceFilters() {
+export function MarketplaceFilters({
+    searchQuery,
+    setSearchQuery,
+    sortOption,
+    setSortOption
+}: MarketplaceFiltersProps) {
     return (
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input placeholder="Search assets..." className="pl-10 w-full sm:w-64" />
+                <Input 
+                    placeholder="Search assets..." 
+                    className="pl-10 w-full sm:w-64"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </div>
 
             <DropdownMenu>
@@ -30,18 +46,20 @@ export function MarketplaceFilters() {
                     <div className="p-2 space-y-4">
                          <div className="space-y-2">
                             <Label>Sort by</Label>
-                            <Select defaultValue="yield-desc">
+                            <Select value={sortOption} onValueChange={setSortOption}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Sort by" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="yield-desc">Expected Yield (High to Low)</SelectItem>
                                     <SelectItem value="yield-asc">Expected Yield (Low to High)</SelectItem>
-                                    <SelectItem value="price-desc">Token Price (High to Low)</SelectItem>
-                                    <SelectItem value="price-asc">Token Price (Low to High)</SelectItem>
+                                    <SelectItem value="price-desc">Price (High to Low)</SelectItem>
+                                    <SelectItem value="price-asc">Price (Low to High)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                        {/* Location filter can be added back once location data is standardized */}
+                        {/* 
                         <div className="space-y-2">
                             <Label>Location</Label>
                              <Select>
@@ -57,6 +75,7 @@ export function MarketplaceFilters() {
                             </Select>
                         </div>
                         <Button className="w-full">Apply Filters</Button>
+                         */}
                     </div>
                 </DropdownMenuContent>
             </DropdownMenu>
