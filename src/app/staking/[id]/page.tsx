@@ -1,16 +1,19 @@
 
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { proposals } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Check, ThumbsUp, ThumbsDown, X, Download } from 'lucide-react';
+import { ArrowLeft, Check, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc, increment, runTransaction } from 'firebase/firestore';
+import type { GovernanceProposal } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProposalDetailPage() {
     const params = useParams();
@@ -18,9 +21,46 @@ export default function ProposalDetailPage() {
     const { toast } = useToast();
     const id = params.id as string;
     
-    const [voted, setVoted] = useState<null | 'for' | 'against'>(null);
+    const [proposal, setProposal] = useState<GovernanceProposal | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [isVoting, setIsVoting] = useState(false);
+    const [voted, setVoted] = useState<null | 'for' | 'against'>(null); // To-do: Persist this per user
 
-    const proposal = proposals.find(p => p.id === id);
+    useEffect(() => {
+      if (!id) return;
+      setLoading(true);
+      const unsub = getDoc(doc(db, "proposals", id)).then(docSnap => {
+          if (docSnap.exists()) {
+              setProposal({ id: docSnap.id, ...docSnap.data()} as GovernanceProposal);
+          } else {
+              console.log("No such document!");
+          }
+          setLoading(false);
+      });
+    }, [id]);
+
+
+    if (loading) {
+        return (
+            <div className="space-y-8">
+                <Skeleton className="h-8 w-40" />
+                <div className="space-y-2">
+                    <Skeleton className="h-10 w-3/4" />
+                    <Skeleton className="h-6 w-1/4" />
+                </div>
+                 <div className="grid lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                        <Card><CardHeader><Skeleton className="h-6 w-48" /></CardHeader><CardContent className="space-y-6"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></CardContent></Card>
+                    </div>
+                    <div className="space-y-8">
+                         <Card><CardHeader><Skeleton className="h-8 w-40" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
+                         <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-full" /></CardContent></Card>
+                    </div>
+                 </div>
+            </div>
+        )
+    }
 
     if (!proposal) {
         return (
@@ -41,7 +81,7 @@ export default function ProposalDetailPage() {
     const forPercentage = totalVotes > 0 ? (proposal.votesFor / totalVotes) * 100 : 0;
     const againstPercentage = totalVotes > 0 ? (proposal.votesAgainst / totalVotes) * 100 : 0;
     
-    const handleVote = (vote: 'for' | 'against') => {
+    const handleVote = async (vote: 'for' | 'against') => {
         if (proposal.status !== 'Active') {
             toast({ title: "Voting Closed", description: "This proposal is no longer active.", variant: "destructive" });
             return;
@@ -50,8 +90,28 @@ export default function ProposalDetailPage() {
              toast({ title: "Already Voted", description: `You have already voted on this proposal.`, variant: "destructive" });
             return;
         }
-        setVoted(vote);
-        toast({ title: "Vote Cast!", description: `You have successfully voted '${vote}'.` });
+        
+        setIsVoting(true);
+        try {
+            const proposalRef = doc(db, "proposals", id);
+            const fieldToIncrement = vote === 'for' ? 'votesFor' : 'votesAgainst';
+            
+            await updateDoc(proposalRef, {
+                [fieldToIncrement]: increment(1)
+            });
+
+            // Optimistically update the UI
+            setProposal(prev => prev ? { ...prev, [fieldToIncrement]: prev[fieldToIncrement] + 1 } : null);
+
+            setVoted(vote);
+            toast({ title: "Vote Cast!", description: `You have successfully voted '${vote}'.` });
+
+        } catch (error) {
+            console.error("Error casting vote: ", error);
+            toast({ title: "Error", description: "Could not cast your vote. Check Firestore rules.", variant: "destructive" });
+        } finally {
+            setIsVoting(false);
+        }
     }
 
     return (
@@ -66,7 +126,7 @@ export default function ProposalDetailPage() {
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">{proposal.title}</h1>
-                        <p className="text-muted-foreground mt-2">Proposal ID: {proposal.id}</p>
+                        <p className="text-muted-foreground mt-2 font-mono text-xs">Proposal ID: {proposal.id}</p>
                     </div>
                     <Badge variant={
                         proposal.status === 'Active' ? 'default' :
@@ -124,11 +184,11 @@ export default function ProposalDetailPage() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Button size="lg" className="bg-primary/90 hover:bg-primary" onClick={() => handleVote('for')}>
-                                        <ThumbsUp className="mr-2"/> For
+                                    <Button size="lg" className="bg-primary/90 hover:bg-primary" onClick={() => handleVote('for')} disabled={isVoting}>
+                                        {isVoting ? <Loader2 className="animate-spin" /> : <ThumbsUp className="mr-2"/>} For
                                     </Button>
-                                    <Button size="lg" variant="destructive" className="bg-destructive/90 hover:bg-destructive" onClick={() => handleVote('against')}>
-                                        <ThumbsDown className="mr-2"/> Against
+                                    <Button size="lg" variant="destructive" className="bg-destructive/90 hover:bg-destructive" onClick={() => handleVote('against')} disabled={isVoting}>
+                                        {isVoting ? <Loader2 className="animate-spin" /> : <ThumbsDown className="mr-2"/>} Against
                                     </Button>
                                 </div>
                             )}
@@ -156,12 +216,6 @@ export default function ProposalDetailPage() {
                                 <span className="font-medium">{totalVotes.toLocaleString()}</span>
                             </div>
                         </CardContent>
-                        <CardFooter>
-                            <Button variant="outline" className="w-full">
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Proposal (PDF)
-                            </Button>
-                        </CardFooter>
                     </Card>
                 </div>
 

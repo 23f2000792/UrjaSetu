@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import type { GovernanceProposal } from '@/lib/mock-data';
 
 
@@ -29,7 +29,8 @@ export default function StakingPage() {
 
   useEffect(() => {
     setLoadingProposals(true);
-    const unsub = onSnapshot(collection(db, "proposals"), (snapshot) => {
+    const q = query(collection(db, "proposals"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
         const proposalsData: GovernanceProposal[] = [];
         snapshot.forEach((doc) => {
             proposalsData.push({ id: doc.id, ...doc.data() } as GovernanceProposal);
@@ -177,7 +178,7 @@ export default function StakingPage() {
                         </TableRow>
                     ) : proposals.map(proposal => (
                         <TableRow key={proposal.id}>
-                            <TableCell className="text-muted-foreground">{proposal.id}</TableCell>
+                            <TableCell className="text-muted-foreground font-mono text-xs">{proposal.id.substring(0, 8)}...</TableCell>
                             <TableCell className="font-medium">{proposal.title}</TableCell>
                             <TableCell>
                                 <Badge variant={
@@ -192,6 +193,13 @@ export default function StakingPage() {
                             </TableCell>
                         </TableRow>
                     ))}
+                     {proposals.length === 0 && !loadingProposals && (
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                No active proposals at the moment.
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
             </Table>
         </CardContent>
@@ -200,5 +208,3 @@ export default function StakingPage() {
     </div>
   );
 }
-
-    

@@ -4,81 +4,99 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is authenticated
+    // Function to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if the user is the owner of the resource
+    // Function to check if the user is the owner of a document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    // Helper function to check for a specific role
-    function hasRole(role) {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    // Function to get user role
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    function isSeller() {
+        return isAuthenticated() && getRole(request.auth.uid) == 'seller';
+    }
+
+    function isAdmin() {
+        return isAuthenticated() && getRole(request.auth.uid) == 'admin';
     }
 
     // Users Collection
+    // - Anyone can create their own user document (on signup)
+    // - Users can only read/update their own document
+    // - Authenticated users can read public fields of other users (for leaderboards, etc.)
     match /users/{userId} {
-      allow create: if request.auth.uid == userId; // Allow user to create their own profile
-      allow read: if isAuthenticated(); // Allow any authenticated user to read profiles (for leaderboards, etc.)
-      allow write: if isOwner(userId); // Allow user to update their own profile
+      allow create: if isOwner(userId);
+      allow read: if isAuthenticated();
+      allow update: if isOwner(userId);
     }
 
     // Projects Collection
+    // - Any authenticated user can read projects (marketplace)
+    // - Only sellers can create new projects
+    // - Only the owner of the project can update it (e.g. description)
+    // - Transactions can update tokensAvailable (see transactions rules)
     match /projects/{projectId} {
-      allow read: if isAuthenticated(); // Allow any authenticated user to see project listings
-      allow create: if hasRole('seller'); // Only sellers can create projects
-      allow update: if hasRole('seller') && resource.data.ownerId == request.auth.uid; // Only the owner can update their project
-      // Add 'delete' rule if needed
-    }
-    
-    // Energy Credits Collection
-    match /energyCredits/{creditId} {
-        allow read: if isAuthenticated();
-        allow create: if hasRole('seller');
-        allow update: if hasRole('seller') && resource.data.ownerId == request.auth.uid;
-    }
-
-    // Transactions Collection
-    match /transactions/{transactionId} {
-      // Users can create their own transactions, and read them for history/reporting.
-      allow create, read: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // No updates or deletes allowed for transaction records to maintain integrity
+      allow read: if isAuthenticated();
+      allow create: if isSeller();
+      allow update: if isOwner(resource.data.ownerId);
     }
     
     // Portfolio Assets Collection
+    // - Users can only create, read, update, or delete their own portfolio assets
     match /portfolioAssets/{assetId} {
-        // Users can only interact with their own portfolio assets.
-        // The assetId is expected to be in the format `userId_marketAssetId`
-        allow read, create, update, delete: if isAuthenticated() && isOwner(assetId.split('_')[0]);
+      allow read, update, delete: if isAuthenticated() && assetId.startsWith(request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Transactions Collection
+    // - Users can create their own transactions (e.g., buying tokens)
+    // - Users can only read their own transactions
+    match /transactions/{transactionId} {
+        allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+        allow read: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Documents Collection (for KYC, etc.)
+    // - Users can create (upload) their own documents
+    // - Users can only read their own documents
+    // - Admins can read all documents and update their status for review
+    match /documents/{documentId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.ownerId);
+      allow read: if isAuthenticated() && (isOwner(resource.data.ownerId) || isAdmin());
+      allow update: if isAdmin();
     }
     
     // Disputes Collection
+    // - Authenticated users can create their own disputes
+    // - Users can only read their own disputes
+    // - Admins and Sellers can read all disputes and update them
     match /disputes/{disputeId} {
-        // Any user can create a dispute for themselves.
-        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-        // Users can read their own disputes. Admins can read all disputes.
-        allow read: if (isAuthenticated() && isOwner(resource.data.userId)) || hasRole('admin');
-        // Admins can update the status of any dispute.
-        allow update: if hasRole('admin');
+        allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+        allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || isSeller());
+        allow update: if isAdmin() || isSeller();
     }
-    
-    // Documents Collection
-    match /documents/{documentId} {
-        // Any user can upload a document for themselves.
-        allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
-        // Users can read their own documents. Admins can read all documents for review.
-        allow read: if (isAuthenticated() && isOwner(resource.data.ownerId)) || hasRole('admin');
-        // Admins can update the status of any document.
-        allow update: if hasRole('admin');
-    }
-    
-    // Governance Proposals Collection
+
+    // Proposals Collection (Governance)
+    // - Any authenticated user can read proposals
+    // - Only sellers can create proposals
+    // - Any authenticated user can vote (update vote counts)
     match /proposals/{proposalId} {
-        allow read: if isAuthenticated(); // All authenticated users can read proposals
-        // More complex write rules would go here (e.g., only DAO members can create)
+      allow read: if isAuthenticated();
+      allow create: if isSeller();
+      allow update: if isAuthenticated(); // Allows for voting
+    }
+    
+     // Energy Credits Collection
+    match /energyCredits/{creditId} {
+      allow read: if isAuthenticated();
+      // Add create/update rules if sellers/admins can create these later
     }
   }
 }

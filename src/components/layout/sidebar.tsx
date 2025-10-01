@@ -40,6 +40,7 @@ import {
   Gavel,
   AreaChart,
   Briefcase,
+  Vote,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +66,7 @@ const sellerNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/seller/projects', icon: Briefcase, label: 'My Projects' },
     { href: '/seller/documents', icon: FileText, label: 'My Documents'},
+    { href: '/seller/governance', icon: Vote, label: 'Governance' },
     { href: '/seller/disputes', icon: Gavel, label: 'Dispute Management' },
 ];
 
