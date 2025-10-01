@@ -1,16 +1,19 @@
 
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Leaf, Zap, Globe } from "lucide-react";
 import Image from "next/image";
 
 export default function AboutPage() {
   const teamMembers = [
-    { name: 'Aditi Sharma', role: 'CEO & Founder', imageId: 'trader1' },
-    { name: 'Rohan Verma', role: 'CTO & Co-Founder', imageId: 'trader2' },
-    { name: 'Priya Singh', role: 'Lead Engineer', imageId: 'trader4' },
-    { name: 'Arjun Das', role: 'Head of Operations', imageId: 'trader3' },
+    { name: 'Krish Gupta', role: 'CEO & Founder', imageId: 'trader1', bio: "Krish is a visionary leader with a passion for renewable energy and blockchain technology. He founded UrjaSetu with the goal of making sustainable investing accessible to everyone." },
+    { name: 'Rohan Verma', role: 'CTO & Co-Founder', imageId: 'trader2', bio: "Rohan is the technical architect behind the UrjaSetu platform. With a deep background in decentralized systems, he ensures the platform is secure, scalable, and efficient." },
+    { name: 'Priya Singh', role: 'Lead Engineer', imageId: 'trader4', bio: "Priya leads the engineering team, turning complex requirements into elegant and functional code. Her expertise in full-stack development is crucial to the platform's success." },
+    { name: 'Arjun Das', role: 'Head of Operations', imageId: 'trader3', bio: "Arjun oversees the day-to-day operations of UrjaSetu, from project verification to customer support. He is committed to ensuring a seamless experience for all users." },
   ];
   
   const heroImage = PlaceHolderImages.find(p => p.id === 'hero-main')?.imageUrl || '';
@@ -92,14 +95,33 @@ export default function AboutPage() {
           {teamMembers.map(member => {
             const memberImage = PlaceHolderImages.find(p => p.id === member.imageId)?.imageUrl || '';
             return (
-              <div key={member.name} className="flex flex-col items-center text-center">
-                <Avatar className="h-32 w-32 mb-4">
-                  <AvatarImage src={memberImage} data-ai-hint="person portrait" />
-                  <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <h3 className="font-bold text-lg">{member.name}</h3>
-                <p className="text-muted-foreground">{member.role}</p>
-              </div>
+              <Dialog key={member.name}>
+                <DialogTrigger asChild>
+                  <div className="flex flex-col items-center text-center cursor-pointer group">
+                    <Avatar className="h-32 w-32 mb-4 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
+                      <AvatarImage src={memberImage} data-ai-hint="person portrait" />
+                      <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-bold text-lg">{member.name}</h3>
+                    <p className="text-muted-foreground">{member.role}</p>
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <div className="flex flex-col items-center text-center">
+                        <Avatar className="h-24 w-24 mb-4">
+                            <AvatarImage src={memberImage} data-ai-hint="person portrait" />
+                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <DialogTitle className="text-2xl">{member.name}</DialogTitle>
+                        <p className="text-primary font-medium">{member.role}</p>
+                    </div>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <p className="text-sm text-muted-foreground text-center">{member.bio}</p>
+                  </div>
+                </DialogContent>
+              </Dialog>
             )
           })}
         </div>
