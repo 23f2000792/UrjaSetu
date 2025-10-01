@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel } from "lucide-react";
+import Link from "next/link";
 
 
 export interface Dispute {
@@ -82,7 +83,9 @@ export function UserDisputeList({ disputes, loading }: UserDisputeListProps) {
                                     </TableCell>
                                     <TableCell>{formatDate(dispute.createdAt)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">View Details</Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/disputes/${dispute.id}`}>View Details</Link>
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
