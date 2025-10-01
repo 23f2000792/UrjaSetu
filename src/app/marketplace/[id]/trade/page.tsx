@@ -7,12 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, ShieldCheck, Landmark, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, ShieldCheck, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit, PortfolioAsset, Transaction } from '@/lib/mock-data';
 import type { User } from 'firebase/auth';
 
@@ -94,7 +92,7 @@ export default function TradePage() {
                     throw "Project does not exist!";
                 }
 
-                const currentProjectData = projectDoc.data() as SolarProject; // Assuming project for tokens
+                const currentProjectData = projectDoc.data() as SolarProject;
                 const price = (asset as any).tokenPrice || (asset as any).price;
                 const available = currentProjectData.tokensAvailable;
 
@@ -154,7 +152,7 @@ export default function TradePage() {
             console.error("Purchase transaction failed: ", e);
             toast({
                 title: "Purchase Failed",
-                description: e.message || "Could not complete the purchase. Please check permissions and try again.",
+                description: e.toString(),
                 variant: "destructive",
             });
         } finally {
@@ -164,11 +162,11 @@ export default function TradePage() {
 
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div className="max-w-xl mx-auto p-4"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary"/></div>;
     }
 
     if (!asset) {
-        return <div>Asset not found</div>;
+        return <div className="text-center p-8">Asset not found</div>;
     }
     
     const name = (asset as any).name || `${(asset as any).projectName} Credits`;
@@ -179,7 +177,7 @@ export default function TradePage() {
     const totalCost = quantity * price;
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-xl mx-auto">
             <Button asChild variant="outline" size="sm" className="mb-4">
                 <Link href={`/marketplace/${id}`}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -188,113 +186,53 @@ export default function TradePage() {
             </Button>
         
             <Card className="overflow-hidden">
-                <div className="grid md:grid-cols-[2fr_3fr]">
-                    <div className="p-6 bg-muted/30">
-                        <CardHeader className="p-0">
-                            <CardTitle className="text-primary text-xl">{name}</CardTitle>
-                            <CardDescription>You are purchasing {unit}.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 pt-6 space-y-4">
-                            <div>
-                                <Label htmlFor="quantity">Quantity</Label>
-                                <Input 
-                                    id="quantity" 
-                                    type="number" 
-                                    value={quantity}
-                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                    min="1"
-                                    max={available}
-                                    disabled={isPurchasing}
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {available.toLocaleString()} available
-                                </p>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Price / {isCredit ? 'kWh' : 'Token'}</span>
-                                    <span>Rs. {price.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Quantity</span>
-                                    <span>x {quantity}</span>
-                                </div>
-                                <Separator />
-                                <div className="flex justify-between font-bold text-base">
-                                    <span>Total Cost</span>
-                                    <span>Rs. {totalCost.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </CardContent>
+                <CardHeader>
+                    <CardTitle className="text-primary text-xl">Buy {name}</CardTitle>
+                    <CardDescription>You are purchasing {unit}.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <Label htmlFor="quantity">Quantity</Label>
+                        <Input 
+                            id="quantity" 
+                            type="number" 
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            min="1"
+                            max={available}
+                            disabled={isPurchasing}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {available.toLocaleString()} available
+                        </p>
                     </div>
-                    <div className="p-6">
-                        <Tabs defaultValue="card" className="w-full">
-                             <TabsList className="grid w-full grid-cols-2 mb-6">
-                                <TabsTrigger value="card" disabled={isPurchasing}><CreditCard className="mr-2 h-4 w-4"/>Card</TabsTrigger>
-                                <TabsTrigger value="netbanking" disabled={isPurchasing}><Landmark className="mr-2 h-4 w-4"/>Net Banking</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="card">
-                                <CardHeader className="p-0">
-                                    <CardTitle className="flex items-center gap-2 text-base">Card Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 pt-6 space-y-4">
-                                    <div>
-                                        <Label htmlFor="card-number">Card Number</Label>
-                                        <Input id="card-number" placeholder="**** **** **** 1234" disabled={isPurchasing}/>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="expiry">Expiry</Label>
-                                            <Input id="expiry" placeholder="MM/YY" disabled={isPurchasing}/>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="cvc">CVC</Label>
-                                            <Input id="cvc" placeholder="123" disabled={isPurchasing}/>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="name-on-card">Name on Card</Label>
-                                        <Input id="name-on-card" placeholder="John Doe" disabled={isPurchasing}/>
-                                    </div>
-                                </CardContent>
-                            </TabsContent>
-
-                            <TabsContent value="netbanking">
-                                 <CardHeader className="p-0">
-                                    <CardTitle className="flex items-center gap-2 text-base">Select Bank</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 pt-6 space-y-4">
-                                    <Select disabled={isPurchasing}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Choose your bank" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="sbi">State Bank of India</SelectItem>
-                                            <SelectItem value="hdfc">HDFC Bank</SelectItem>
-                                            <SelectItem value="icici">ICICI Bank</SelectItem>
-                                            <SelectItem value="axis">Axis Bank</SelectItem>
-                                            <SelectItem value="kotak">Kotak Mahindra Bank</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground">You will be redirected to your bank's portal to complete the payment.</p>
-                                </CardContent>
-                            </TabsContent>
-
-                        </Tabs>
-
-                         <CardFooter className="flex-col items-stretch p-0 pt-6 gap-4">
-                            <Button size="lg" onClick={handlePurchase} disabled={isPurchasing}>
-                                {isPurchasing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Pay Rs. {totalCost.toFixed(2)}
-                            </Button>
-                             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                <ShieldCheck className="h-4 w-4 text-primary" />
-                                <span>Secure payment powered by UrjaSetu.</span>
-                            </div>
-                        </CardFooter>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Price / {isCredit ? 'kWh' : 'Token'}</span>
+                            <span>Rs. {price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Quantity</span>
+                            <span>x {quantity}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-bold text-lg">
+                            <span>Total Cost</span>
+                            <span>Rs. {totalCost.toFixed(2)}</span>
+                        </div>
                     </div>
-                </div>
+                </CardContent>
+
+                <CardFooter className="flex-col items-stretch p-6 pt-2 gap-4">
+                    <Button size="lg" onClick={handlePurchase} disabled={isPurchasing}>
+                        {isPurchasing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Pay Now
+                    </Button>
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        <span>Secure payment powered by UrjaSetu.</span>
+                    </div>
+                </CardFooter>
             </Card>
 
             <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
@@ -317,9 +255,6 @@ export default function TradePage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
         </div>
     );
 }
-
-    
