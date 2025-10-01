@@ -1,9 +1,9 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
@@ -15,90 +15,73 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
+
     function isProjectOwner(projectId) {
       return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
-    
-    // --- Collection Rules ---
 
-    // Users: Anyone can read profiles, but only owners can update.
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
       allow update: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn();
     }
-    
-    // Projects: Publicly readable. Only owners can create/update/delete.
-    // Buyers can update ONLY to decrement token count.
+
     match /projects/{projectId} {
       allow read: if true;
-      allow create: if isSignedIn() && isRole('seller');
-      allow update: if (isSignedIn() && isRole('seller') && isProjectOwner(projectId)) ||
-                      (isSignedIn() && isRole('buyer') &&
-                       request.resource.data.tokensAvailable < resource.data.tokensAvailable &&
-                       request.resource.data.diff(resource.data).changedKeys().hasOnly(['tokensAvailable']));
-
+      allow create: if isSignedIn() && isRole('seller') && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isRole('seller') && isProjectOwner(projectId);
       allow delete: if isSignedIn() && isRole('seller') && isProjectOwner(projectId);
     }
 
-    // Energy Credits: Publicly readable.
     match /energyCredits/{creditId} {
       allow read: if true;
-      // Write access should be controlled by a backend/admin role
-      allow create, update, delete: if false; 
     }
 
-    // Transactions: Users can create their own. Read access for buyer or seller.
     match /transactions/{transactionId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      // Allow read if user is the buyer OR the seller involved in the transaction.
+      // This is critical for the seller dashboard to get real-time sales updates.
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false; // Transactions should be immutable
     }
 
-    // Notifications: Users can only access their own.
-    match /notifications/{notificationId} {
-      allow read, write: if isSignedIn() && (request.resource.data.userId == request.auth.uid || resource.data.userId == request.auth.uid);
-    }
-
-    // Documents: Only owners can write. Read access for admin/reviewers handled by backend.
     match /documents/{documentId} {
-      allow read, write: if isSignedIn() && (isRole('seller') && request.resource.data.ownerId == request.auth.uid);
-      // Admin update rule for status change
+      allow read: if isSignedIn() && (isRole('admin') || resource.data.ownerId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if isSignedIn() && isRole('admin');
+      allow delete: if isSignedIn() && isRole('admin');
     }
 
-    // Proposals: Any signed-in user can read. Sellers create. Updates are restricted to votes.
     match /proposals/{proposalId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isRole('seller');
-      // Allow anyone to vote, or admins/owners to change status
-      allow update: if isSignedIn() && (
-                      (isRole('buyer') && request.resource.data.diff(resource.data).changedKeys().hasOnly(['votesFor', 'votesAgainst'])) ||
-                      (isRole('seller') && isProjectOwner(resource.data.projectId))
-                    );
+        allow read: if true;
+        allow create: if isSignedIn() && isRole('seller') && request.resource.data.proposerId == request.auth.uid;
+        // Allow updates only for voting (for/against) or status changes by the proposer (if they are a seller)
+        allow update: if isSignedIn() && 
+          (
+            ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votesFor', 'votesAgainst'])) ||
+            ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && resource.data.proposerId == request.auth.uid && isRole('seller') )
+          );
     }
 
-    // Disputes:
     match /disputes/{disputeId} {
-      allow read, create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid || isRole('admin'));
-      
-      // Allow status updates by seller/admin, or rating by buyer on resolved disputes
-      allow update: if isSignedIn() && (
-                      (resource.data.sellerId == request.auth.uid && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])) ||
-                      (isRole('admin') && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])) ||
-                      (resource.data.userId == request.auth.uid && resource.data.status == 'Resolved' && request.resource.data.diff(resource.data).changedKeys().hasOnly(['rating']))
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.sellerId == request.auth.uid || isRole('admin'));
+      allow create: if isSignedIn() && isRole('buyer') && request.resource.data.userId == request.auth.uid;
+      // Allow seller to update status, or buyer to update rating
+      allow update: if isSignedIn() &&
+                    (
+                      (isRole('seller') && resource.data.sellerId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+                      (isRole('buyer') && resource.data.userId == request.auth.uid && resource.data.status == 'Resolved' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating']))
                     );
-
-      // Messages subcollection
+      
       match /messages/{messageId} {
-        allow read, create: if isSignedIn() && (
-                            get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId == request.auth.uid ||
-                            get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId == request.auth.uid ||
-                            isRole('admin')
-                           );
-        allow update, delete: if false;
+        allow read, create: if isSignedIn() && (get(/databases/$(database)/documents/disputes/$(disputeId)).data.userId == request.auth.uid || get(/databases/$(database)/documents/disputes/$(disputeId)).data.sellerId == request.auth.uid || isRole('admin'));
       }
+    }
+    
+    match /notifications/{notificationId} {
+        allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow create: if true; // Allows backend or client to create notifications
     }
   }
 }
