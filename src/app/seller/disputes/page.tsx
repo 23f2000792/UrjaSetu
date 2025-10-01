@@ -8,7 +8,7 @@ import { SellerDisputeList, Dispute } from "@/components/seller/seller-dispute-l
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { Star, MessageSquare, CheckSquare } from "lucide-react";
+import { Star, MessageSquare, CheckSquare, Gavel } from "lucide-react";
 
 export default function SellerDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
@@ -123,5 +123,3 @@ export default function SellerDisputesPage() {
     </div>
   );
 }
-
-    
