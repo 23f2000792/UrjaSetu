@@ -35,9 +35,9 @@ import {
   Gift,
   Code,
   Bell,
-  LogIn,
   FileText,
   Shield,
+  LogIn,
 } from 'lucide-react';
 
 
@@ -80,9 +80,8 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
-                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -101,9 +100,8 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground px-4 py-2 group-data-[collapsible=icon]:hidden">Admin</p>
              {adminNavItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
-                  as="a"
                   isActive={isNavItemActive(item.href)}
                   tooltip={item.label}
                   className="justify-start"
@@ -200,8 +198,8 @@ export function AppSidebar() {
         ) : (
           <div className="p-2 group-data-[collapsible=icon]:hidden">
              <SidebarSeparator />
-            <Link href="/profile" passHref>
-              <Button as="a" className="w-full">
+            <Link href="/profile">
+              <Button className="w-full">
                 <LogIn className="mr-2 h-4 w-4" />
                 Login
               </Button>
