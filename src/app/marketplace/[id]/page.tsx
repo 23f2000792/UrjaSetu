@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useParams } from 'next/navigation';
@@ -7,7 +8,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Zap, MapPin, TrendingUp, FileText, CheckCircle, Package } from 'lucide-react';
+import { ArrowLeft, Zap, MapPin, TrendingUp, FileText, CheckCircle, Package, Download } from 'lucide-react';
 import Link from 'next/link';
 import PortfolioChart from '@/components/dashboard/portfolio-chart'; // Reusing for demo
 
@@ -139,7 +140,7 @@ export default function AssetDetailPage() {
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Vintage</span>
                                     <span className="font-medium">{credit.vintage}</span>
-                                d_iv>
+                                </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Amount</span>
                                     <span className="font-medium">{credit.amount.toLocaleString()} kWh</span>
