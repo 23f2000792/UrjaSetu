@@ -35,7 +35,7 @@ export default function AssetCard({ project }: { project: SolarProject }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground">
+        <Button className="w-full">
             Trade at ${project.tokenPrice.toFixed(2)}
         </Button>
       </CardFooter>

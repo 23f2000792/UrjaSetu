@@ -7,9 +7,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ShieldCheck, LogIn, Crown, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ProfilePage() {
   const isAuthenticated = true; // Mock authentication state
+  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
 
   return (
     <div className="space-y-8">
@@ -21,7 +23,7 @@ export default function ProfilePage() {
             <Card>
               <CardContent className="pt-6 flex flex-col items-center space-y-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="https://picsum.photos/seed/user/100/100" data-ai-hint="person portrait" />
+                  <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
                   <AvatarFallback>U</AvatarFallback>
                 </Avatar>
                 <div className="text-center">
@@ -55,12 +57,12 @@ export default function ProfilePage() {
                   <Input id="wallet" readOnly value="0x1234...5678" />
                 </div>
                 
-                <Card className="bg-accent/10 border-accent">
+                <Card className="bg-primary/5 border-primary">
                     <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                         <ShieldCheck className="h-8 w-8 text-primary" />
                         <div>
                             <CardTitle className="text-lg">KYC Status</CardTitle>
-                            <CardDescription className="text-accent-foreground/80">
+                            <CardDescription className="text-primary/80">
                                 Your identity has been verified.
                             </CardDescription>
                         </div>

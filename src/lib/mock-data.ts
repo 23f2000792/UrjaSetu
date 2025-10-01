@@ -1,3 +1,5 @@
+import { PlaceHolderImages } from './placeholder-images';
+
 export type SolarProject = {
   id: string;
   name: string;
@@ -10,10 +12,10 @@ export type SolarProject = {
 };
 
 export const solarProjects: SolarProject[] = [
-  { id: 'sp1', name: 'Mojave Solar Park', location: 'California, USA', capacity: 250000, tokenPrice: 1.20, expectedYield: 8.5, imageUrl: 'https://picsum.photos/seed/sp1/600/400', imageHint: 'solar panels' },
-  { id: 'sp2', name: 'Thar Desert Array', location: 'Rajasthan, India', capacity: 2245000, tokenPrice: 0.85, expectedYield: 9.2, imageUrl: 'https://picsum.photos/seed/sp2/600/400', imageHint: 'desert solar' },
-  { id: 'sp3', name: 'Rooftop Revolution', location: 'Berlin, Germany', capacity: 50000, tokenPrice: 1.50, expectedYield: 7.8, imageUrl: 'https://picsum.photos/seed/sp3/600/400', imageHint: 'rooftop solar' },
-  { id: 'sp4', name: 'Sunshine Valley', location: 'Queensland, Australia', capacity: 150000, tokenPrice: 1.10, expectedYield: 8.9, imageUrl: 'https://picsum.photos/seed/sp4/600/400', imageHint: 'solar farm' },
+  { id: 'sp1', name: 'Mojave Solar Park', location: 'California, USA', capacity: 250000, tokenPrice: 1.20, expectedYield: 8.5, imageUrl: PlaceHolderImages.find(p => p.id === 'sp1')?.imageUrl || '', imageHint: 'solar panels' },
+  { id: 'sp2', name: 'Thar Desert Array', location: 'Rajasthan, India', capacity: 2245000, tokenPrice: 0.85, expectedYield: 9.2, imageUrl: PlaceHolderImages.find(p => p.id === 'sp2')?.imageUrl || '', imageHint: 'desert solar' },
+  { id: 'sp3', name: 'Rooftop Revolution', location: 'Berlin, Germany', capacity: 50000, tokenPrice: 1.50, expectedYield: 7.8, imageUrl: PlaceHolderImages.find(p => p.id === 'sp3')?.imageUrl || '', imageHint: 'rooftop solar' },
+  { id: 'sp4', name: 'Sunshine Valley', location: 'Queensland, Australia', capacity: 150000, tokenPrice: 1.10, expectedYield: 8.9, imageUrl: PlaceHolderImages.find(p => p.id === 'sp4')?.imageUrl || '', imageHint: 'solar farm' },
 ];
 
 export type EnergyCredit = {
@@ -27,9 +29,9 @@ export type EnergyCredit = {
 };
 
 export const energyCredits: EnergyCredit[] = [
-  { id: 'ec1', projectName: 'Mojave Solar Park', amount: 1000, price: 0.15, vintage: '2023', imageUrl: 'https://picsum.photos/seed/ec1/600/400', imageHint: 'energy grid' },
-  { id: 'ec2', projectName: 'Thar Desert Array', amount: 5000, price: 0.12, vintage: '2024', imageUrl: 'https://picsum.photos/seed/ec2/600/400', imageHint: 'power lines' },
-  { id: 'ec3', projectName: 'Rooftop Revolution', amount: 500, price: 0.18, vintage: '2023', imageUrl: 'https://picsum.photos/seed/ec3/600/400', imageHint: 'city energy' },
+  { id: 'ec1', projectName: 'Mojave Solar Park', amount: 1000, price: 0.15, vintage: '2023', imageUrl: PlaceHolderImages.find(p => p.id === 'ec1')?.imageUrl || '', imageHint: 'energy grid' },
+  { id: 'ec2', projectName: 'Thar Desert Array', amount: 5000, price: 0.12, vintage: '2024', imageUrl: PlaceHolderImages.find(p => p.id === 'ec2')?.imageUrl || '', imageHint: 'power lines' },
+  { id: 'ec3', projectName: 'Rooftop Revolution', amount: 500, price: 0.18, vintage: '2023', imageUrl: PlaceHolderImages.find(p => p.id === 'ec3')?.imageUrl || '', imageHint: 'city energy' },
 ];
 
 export type PortfolioAsset = {

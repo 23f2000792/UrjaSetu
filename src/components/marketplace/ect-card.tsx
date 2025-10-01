@@ -31,7 +31,7 @@ export default function ECTCard({ credit }: { credit: EnergyCredit }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground">
+        <Button className="w-full">
             Buy at ${credit.price.toFixed(2)}/kWh
         </Button>
       </CardFooter>

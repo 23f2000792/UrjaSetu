@@ -1,6 +1,18 @@
 {
   "placeholderImages": [
     {
+      "id": "hero-main",
+      "description": "Clean and modern solar panels under a clear blue sky",
+      "imageUrl": "https://images.unsplash.com/photo-1545208942-73c15f6a6f68?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxhZXN0aGV0aWMlMjBzb2xhciUyMHBhbmVsc3xlbnwwfHx8fDE3MjE4MzQ0NTZ8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "aesthetic solar panels"
+    },
+    {
+      "id": "features",
+      "description": "Infographic showing the benefits of renewable energy",
+      "imageUrl": "https://images.unsplash.com/photo-1629359926832-53c8959b46c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxyZW5ld2FibGUlMjBlbmVyZ3klMjBpbmZvZ3JhcGhpY3xlbnwwfHx8fDE3MjE4MzQ1MDh8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "renewable energy infographic"
+    },
+    {
       "id": "sp1",
       "description": "Mojave Solar Park",
       "imageUrl": "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzb2xhciUyMHBhbmVsc3xlbnwwfHx8fDE3NTkyNTgzNTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
@@ -47,6 +59,66 @@
       "description": "User profile avatar",
       "imageUrl": "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTkzMDY0NTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "person portrait"
+    },
+    {
+      "id": "trader1",
+      "description": "Avatar for top trader 1",
+      "imageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "trader2",
+      "description": "Avatar for top trader 2",
+      "imageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "trader3",
+      "description": "Avatar for top trader 3",
+      "imageUrl": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlibrb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "trader4",
+      "description": "Avatar for top trader 4",
+      "imageUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "trader5",
+      "description": "Avatar for top trader 5",
+      "imageUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "offset1",
+      "description": "Avatar for top carbon offsetter 1",
+      "imageUrl": "https://images.unsplash.com/photo-1521119989659-a83eee488004?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "offset2",
+      "description": "Avatar for top carbon offsetter 2",
+      "imageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "offset3",
+      "description": "Avatar for top carbon offsetter 3",
+      "imageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "offset4",
+      "description": "Avatar for top carbon offsetter 4",
+      "imageUrl": "https://images.unsplash.com/photo-1554151228-14d9def656e4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwcm9maWxlJTIwcGljdHVyZXxlbnwwfHx8fDE3MjE4MzQ2MTB8MA&ixlib=rb-4unplash.com/photo-1554151228-14d9def656e4?ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
+    },
+    {
+      "id": "offset5",
+      "description": "Avatar for top carbon offsetter 5",
+      "imageUrl": "https://images.unsplash.com/photo-1599566150163-29194dcaad36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cHJvZmlsZSUyMHBpY3R1cmV8ZW58MHx8fHwxNzIxODM0NjEwfDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "profile picture"
     }
   ]
 }

@@ -1,13 +1,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Leaf, Zap, Shield, Repeat, Package, Users, BarChart } from "lucide-react";
+import { ArrowRight, CheckCircle, Leaf, Zap, Shield, Repeat, Package, BarChart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import AssetCard from "@/components/marketplace/asset-card";
 import { solarProjects } from "@/lib/mock-data";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function LandingPage() {
+    const heroImage = PlaceHolderImages.find(p => p.id === 'hero-main')?.imageUrl || "https://picsum.photos/seed/hero-main/1200/800";
+    const featuresImage = PlaceHolderImages.find(p => p.id === 'features')?.imageUrl || "https://picsum.photos/seed/features/1200/900";
+
+
   return (
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
       <header className="px-4 lg:px-6 h-16 flex items-center bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
@@ -35,7 +40,7 @@ export default function LandingPage() {
               <div className="flex flex-col justify-center space-y-6">
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tighter text-primary sm:text-5xl xl:text-6xl/none">
-                    Powering a Greener Future, Together.
+                    Invest in a Greener Future.
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
                     UrjaSetu is a decentralized marketplace for tokenized solar assets. Invest in renewable energy projects, trade energy credits, and earn rewards while making a real-world impact.
@@ -51,7 +56,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <Image
-                src="https://picsum.photos/seed/hero-main/1200/800"
+                src={heroImage}
                 width="1200"
                 height="800"
                 alt="Hero"
@@ -67,7 +72,7 @@ export default function LandingPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <div className="space-y-2">
-                <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm font-medium">
+                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm font-medium">
                   How It Works
                 </div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
@@ -78,13 +83,13 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
-            <div className="grid gap-8 md:grid-cols-3">
+            <div className="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-3 md:gap-12">
               <Card className="border-none shadow-none bg-transparent">
                 <CardHeader className="items-center">
                   <div className="bg-primary/10 p-4 rounded-full">
-                    <Package className="w-8 h-8 text-primary" />
+                    <Package className="w-10 h-10 text-primary" />
                   </div>
-                  <CardTitle className="mt-4">1. Tokenize</CardTitle>
+                  <CardTitle className="mt-4 text-xl">1. Tokenize</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground">
                   Solar projects are vetted and converted into digital asset tokens on the blockchain, representing ownership or energy credits.
@@ -92,10 +97,10 @@ export default function LandingPage() {
               </Card>
               <Card className="border-none shadow-none bg-transparent">
                 <CardHeader className="items-center">
-                  <div className="bg-primary/10 p-4 rounded-full">
-                    <Repeat className="w-8 h-8 text-primary" />
+                   <div className="bg-primary/10 p-4 rounded-full">
+                    <Repeat className="w-10 h-10 text-primary" />
                   </div>
-                  <CardTitle className="mt-4">2. Trade</CardTitle>
+                  <CardTitle className="mt-4 text-xl">2. Trade</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground">
                   Buy and sell project tokens and energy credits on our secure peer-to-peer marketplace. Build your green portfolio with ease.
@@ -103,10 +108,10 @@ export default function LandingPage() {
               </Card>
               <Card className="border-none shadow-none bg-transparent">
                 <CardHeader className="items-center">
-                  <div className="bg-primary/10 p-4 rounded-full">
-                    <BarChart className="w-8 h-8 text-primary" />
+                   <div className="bg-primary/10 p-4 rounded-full">
+                    <BarChart className="w-10 h-10 text-primary" />
                   </div>
-                  <CardTitle className="mt-4">3. Earn</CardTitle>
+                  <CardTitle className="mt-4 text-xl">3. Earn</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground">
                   Earn rewards from your staked assets and the energy generated by the projects you've invested in. Track your impact and returns.
@@ -117,10 +122,10 @@ export default function LandingPage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="w-full py-20 md:py-24 lg:py-32 bg-card">
+        <section id="features" className="w-full py-20 md:py-24 lg:py-32 bg-muted/50">
           <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12">
             <div className="space-y-4">
-              <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm font-medium">
+              <div className="inline-block rounded-lg bg-background px-3 py-1 text-sm font-medium">
                 Why UrjaSetu?
               </div>
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
@@ -154,7 +159,7 @@ export default function LandingPage() {
               </ul>
             </div>
              <Image
-                src="https://picsum.photos/seed/features/1200/900"
+                src={featuresImage}
                 width={1200}
                 height={900}
                 alt="Feature"
@@ -191,18 +196,18 @@ export default function LandingPage() {
 
 
         {/* CTA Section */}
-        <section className="w-full py-20 md:py-24 lg:py-32 bg-primary/10">
+        <section className="w-full py-20 md:py-24 lg:py-32 bg-primary text-primary-foreground">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <div className="space-y-3">
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight text-primary">
+              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
                 Join the Energy Revolution Today
               </h2>
-              <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl">
+              <p className="mx-auto max-w-[600px] md:text-xl">
                 Create your account, connect your wallet, and start building a portfolio that powers a sustainable tomorrow.
               </p>
             </div>
             <div className="mx-auto w-full max-w-sm space-y-2">
-               <Button asChild size="lg">
+               <Button asChild size="lg" variant="secondary">
                 <Link href="/dashboard">
                   Sign Up Now
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -212,7 +217,7 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="bg-card border-t">
+      <footer className="bg-muted/50 border-t">
         <div className="container flex flex-col gap-4 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6">
             <div className="flex items-center gap-2">
               <Zap className="h-6 w-6 text-primary" />
@@ -223,13 +228,13 @@ export default function LandingPage() {
             </p>
             <nav className="sm:ml-auto flex gap-4 sm:gap-6">
               <Link
-                href="/terms"
+                href="#"
                 className="text-xs hover:underline underline-offset-4"
               >
                 Terms of Service
               </Link>
               <Link
-                href="/privacy"
+                href="#"
                 className="text-xs hover:underline underline-offset-4"
               >
                 Privacy

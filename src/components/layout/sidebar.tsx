@@ -29,7 +29,7 @@ import {
   Lightbulb,
   Coins,
   Settings,
-  Sun,
+  Zap,
   User,
   LogOut,
   Gift,
@@ -41,6 +41,7 @@ import {
   Gavel,
   AreaChart,
 } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const navItems = [
@@ -65,6 +66,8 @@ const isAuthenticated = true; // Mock authentication state
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
+
 
   const isNavItemActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -80,12 +83,12 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <div className="flex items-center gap-2 w-full p-2">
-          <Sun className="w-8 h-8 flex-shrink-0 text-primary" />
+        <Link href="/" className="flex items-center gap-2 w-full p-2">
+          <Zap className="w-8 h-8 flex-shrink-0 text-primary" />
           <h1 className="text-xl font-semibold text-primary group-data-[collapsible=icon]:hidden">
             UrjaSetu
           </h1>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
@@ -139,7 +142,7 @@ export function AppSidebar() {
                     <Button variant="ghost" className="w-full justify-start gap-2 p-2 h-auto">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
+                          <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
                           <AvatarFallback>U</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
@@ -179,7 +182,7 @@ export function AppSidebar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
-                      <AvatarImage src="https://picsum.photos/seed/user/40/40" data-ai-hint="person portrait" />
+                      <AvatarImage src={userAvatar} data-ai-hint="person portrait" />
                       <AvatarFallback>U</AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
