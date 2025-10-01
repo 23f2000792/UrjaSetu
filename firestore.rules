@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper function to check if a user is an authenticated seller (admin)
+    function isSeller() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Any authenticated user can create their own user document (for signup)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can read their own document. Sellers can read any user's document.
+      allow get: if request.auth != null && (request.auth.uid == userId || isSeller());
+      
+      // Users can update their own document, but cannot change their role.
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.role == resource.data.role;
+                    
+      // Only sellers can delete users (for future functionality)
+      allow delete: if isSeller();
+    }
+    
+    // Documents collection for sellers
+    match /documents/{documentId} {
+      // Allow read access to the user who owns the document or any seller
+      allow get: if request.auth.uid == resource.data.ownerId || isSeller();
+      
+      // Allow list access only to sellers (admins)
+      allow list: if isSeller();
+      
+      // Allow document creation if the user is the owner
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      
+      // Allow document updates only by sellers (for status changes)
+      allow update: if isSeller();
+    }
+    
+    // Disputes collection
+    match /disputes/{disputeId} {
+        // Any authenticated user can create a dispute
+        allow create: if request.auth != null;
+        
+        // Users can read their own disputes. Sellers can read all disputes.
+        allow get, list: if request.auth != null && (resource.data.userId == request.auth.uid || isSeller());
+        
+        // Only sellers can update (e.g., change status) or delete disputes
+        allow update, delete: if isSeller();
+    }
+  }
+}

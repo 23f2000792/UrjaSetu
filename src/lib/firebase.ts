@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -12,10 +13,12 @@ const firebaseConfig = {
   "apiKey": "AIzaSyAW9gEQweqSg3fY3GdS_pReH-e3iqfaETA",
   "authDomain": "studio-6965475964-c86b7.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "236000130841"
+  "messagingSenderId": "236000130841",
+  "storageBucket": "studio-6965475964-c86b7.appspot.com"
 };
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
