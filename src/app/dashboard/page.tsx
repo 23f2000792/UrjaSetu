@@ -9,7 +9,7 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import type { PortfolioAsset, SolarProject, Transaction } from '@/lib/mock-data';
+import type { PortfolioAsset, SolarProject, Transaction, EnergyCredit } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Assuming Rupee icon is not available in lucide-react, using a simple string
@@ -62,52 +62,81 @@ export default function DashboardPage() {
 
 
 function UserDashboard({ user }: { user: User | null }) {
-  const [portfolioValue, setPortfolioValue] = useState(0);
-  const [energyGenerated, setEnergyGenerated] = useState(0);
-  const [carbonOffset, setCarbonOffset] = useState(0);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [portfolioValue, setPortfolioValue] = useState(0);
+    const [energyGenerated, setEnergyGenerated] = useState(0);
+    const [carbonOffset, setCarbonOffset] = useState(0);
+    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-        setLoading(false);
-        return;
-    };
-    
-    setLoading(true);
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
-    const portfolioQuery = query(collection(db, "portfolioAssets"), where("userId", "==", user.uid));
-    const unsubPortfolio = onSnapshot(portfolioQuery, (querySnapshot) => {
-      let totalValue = 0;
-      let totalEnergy = 0;
-      querySnapshot.forEach((doc) => {
-        const asset = doc.data() as PortfolioAsset;
-        totalValue += asset.quantity * asset.currentValue;
-        // Assuming 1 token = 120kWh generated over its lifetime so far
-        totalEnergy += asset.quantity * 120; 
-      });
-      setPortfolioValue(totalValue);
-      setEnergyGenerated(totalEnergy);
-      // Assuming 1 kWh = 0.707 kg CO2e
-      setCarbonOffset(totalEnergy * 0.707);
-    });
-    
-    const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
-    const unsubTransactions = onSnapshot(transactionsQuery, (querySnapshot) => {
-        const transactionsData: Transaction[] = [];
-        querySnapshot.forEach((doc) => {
-            transactionsData.push({ id: doc.id, ...doc.data() } as Transaction);
+        setLoading(true);
+
+        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
+        const projectsQuery = collection(db, "projects");
+        const creditsQuery = collection(db, "energyCredits");
+
+        const unsubTransactions = onSnapshot(transactionsQuery, (transactionsSnapshot) => {
+            const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
+                const unsubCredits = onSnapshot(creditsQuery, (creditsSnapshot) => {
+                    
+                    const projectsData = new Map<string, SolarProject>();
+                    projectsSnapshot.forEach(doc => projectsData.set(doc.id, doc.data() as SolarProject));
+                    
+                    const creditsData = new Map<string, EnergyCredit>();
+                    creditsSnapshot.forEach(doc => creditsData.set(doc.id, doc.data() as EnergyCredit));
+
+                    const userTransactions: Transaction[] = [];
+                    transactionsSnapshot.forEach((doc) => {
+                        userTransactions.push({ id: doc.id, ...doc.data() } as Transaction);
+                    });
+                    
+                    const aggregatedAssets: { [key: string]: { quantity: number; currentValue: number } } = {};
+
+                    userTransactions.forEach(tx => {
+                        if (tx.type !== 'Buy') return;
+
+                        const assetId = tx.projectId;
+                        const marketAsset = projectsData.get(assetId) || creditsData.get(assetId);
+                        const currentValue = (marketAsset as any)?.tokenPrice || (marketAsset as any)?.price || 0;
+
+                        if (!aggregatedAssets[assetId]) {
+                            aggregatedAssets[assetId] = { quantity: 0, currentValue: currentValue };
+                        }
+                        
+                        aggregatedAssets[assetId].quantity += tx.quantity;
+                        aggregatedAssets[assetId].currentValue = currentValue; // Ensure current value is updated
+                    });
+                    
+                    let totalValue = 0;
+                    let totalEnergy = 0;
+                    Object.values(aggregatedAssets).forEach(asset => {
+                        totalValue += asset.quantity * asset.currentValue;
+                        // Assuming 1 token = 120kWh generated over its lifetime so far
+                        totalEnergy += asset.quantity * 120;
+                    });
+
+                    setPortfolioValue(totalValue);
+                    setEnergyGenerated(totalEnergy);
+                    // Assuming 1 kWh = 0.707 kg CO2e
+                    setCarbonOffset(totalEnergy * 0.707);
+
+                    setRecentTransactions(userTransactions.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
+                    setLoading(false);
+                });
+                return unsubCredits;
+            });
+            return unsubProjects;
         });
-        setRecentTransactions(transactionsData.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
-        setLoading(false);
-    });
 
-
-    return () => {
-        unsubPortfolio();
-        unsubTransactions();
-    };
-  }, [user]);
+        return () => {
+            unsubTransactions();
+        };
+    }, [user]);
 
   return (
     <div className="space-y-8">
