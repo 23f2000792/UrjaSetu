@@ -6,7 +6,6 @@ import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar";
 import AppHeader from "@/components/layout/header";
 import React from "react";
-import RealtimeNotificationListener from './realtime-notification-listener';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,7 +27,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {children}
             </main>
         </SidebarInset>
-        <RealtimeNotificationListener />
     </SidebarProvider>
   );
 }

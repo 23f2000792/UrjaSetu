@@ -230,9 +230,6 @@ export function AppSidebar() {
                     <DropdownMenuItem asChild>
                       <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link>
-                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
@@ -263,9 +260,6 @@ export function AppSidebar() {
                     <DropdownMenuSeparator />
                      <DropdownMenuItem asChild>
                       <Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />

@@ -112,19 +112,6 @@ export default function DisputeDetailPage() {
         if (!dispute) return;
         try {
             await updateDoc(doc(db, "disputes", id), { status });
-            
-            // Create notification for the buyer
-            const notificationRef = doc(collection(db, 'notifications'));
-            await setDoc(notificationRef, {
-                userId: dispute.userId, // Notify the buyer
-                type: 'dispute-update',
-                title: 'Dispute Status Updated',
-                description: `The status of your dispute case has been updated to "${status}".`,
-                timestamp: serverTimestamp(),
-                isRead: false,
-                disputeId: id,
-            });
-
             toast({ title: "Status Updated", description: `Dispute marked as ${status}.` });
         } catch (error) {
             console.error("Error updating status:", error);

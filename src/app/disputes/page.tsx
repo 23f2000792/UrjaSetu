@@ -104,18 +104,6 @@ export default function DisputesPage() {
             createdAt: serverTimestamp(),
         });
         
-        // Create notification for the seller
-        const notificationRef = doc(collection(db, 'notifications'));
-        await setDoc(notificationRef, {
-            userId: transaction.sellerId, // Notify the seller
-            type: 'dispute',
-            title: 'New Dispute Filed',
-            description: `A dispute has been filed by ${user.email} for project ${transaction.projectName}.`,
-            timestamp: serverTimestamp(),
-            isRead: false,
-            disputeId: disputeDocRef.id,
-        });
-
         toast({ title: "Success", description: "Your dispute has been filed." });
         setSelectedTransaction("");
         setDetails("");
