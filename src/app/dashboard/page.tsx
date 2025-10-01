@@ -199,9 +199,9 @@ function UserDashboard({ user }: { user: User | null }) {
 
 function SellerDashboard({ user }: { user: User | null }) {
     const [projects, setProjects] = useState<SolarProject[]>([]);
-    const [recentSales, setRecentSales] = useState<Transaction[]>([]);
+    const [salesByProject, setSalesByProject] = useState<{ [projectId: string]: Transaction[] }>({});
     const [loading, setLoading] = useState(true);
-    
+
     useEffect(() => {
         if (!user) {
             setLoading(false);
@@ -209,8 +209,8 @@ function SellerDashboard({ user }: { user: User | null }) {
         }
 
         setLoading(true);
-
         const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+        
         const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
             const projectsData: SolarProject[] = [];
             const projectIds: string[] = [];
@@ -221,35 +221,23 @@ function SellerDashboard({ user }: { user: User | null }) {
                 projectIds.push(project.id);
             });
             setProjects(projectsData);
-            setLoading(false); // Set loading to false after projects are fetched
-
-            // Clean up previous listeners
-            const salesListeners: (() => void)[] = [];
-
-            // Now, set up listeners for each project's transactions
-            if (projectIds.length > 0) {
-                const allSales: { [key: string]: Transaction } = {};
-
-                projectIds.forEach(projectId => {
-                    const salesQuery = query(collection(db, "transactions"), where("projectId", "==", projectId));
-                    const unsubSale = onSnapshot(salesQuery, (salesSnapshot) => {
-                        salesSnapshot.forEach(doc => {
-                            allSales[doc.id] = { id: doc.id, ...doc.data() } as Transaction;
-                        });
-
-                        const sortedSales = Object.values(allSales)
-                            .sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
-                            .slice(0, 10); // get latest 10 across all projects
-
-                        setRecentSales(sortedSales);
+            setLoading(false);
+            
+            // Set up listeners for each project's transactions
+            const salesListeners = projectIds.map(projectId => {
+                const salesQuery = query(collection(db, "transactions"), where("projectId", "==", projectId));
+                return onSnapshot(salesQuery, (salesSnapshot) => {
+                    const salesData: Transaction[] = [];
+                    salesSnapshot.forEach(doc => {
+                        salesData.push({ id: doc.id, ...doc.data() } as Transaction);
                     });
-                    salesListeners.push(unsubSale);
+                    setSalesByProject(prevSales => ({
+                        ...prevSales,
+                        [projectId]: salesData
+                    }));
                 });
-            } else {
-                setRecentSales([]);
-            }
+            });
 
-            // Return a cleanup function that unsubscribes from all sales listeners
             return () => {
                 salesListeners.forEach(unsub => unsub());
             };
@@ -260,14 +248,15 @@ function SellerDashboard({ user }: { user: User | null }) {
         };
     }, [user]);
 
+    const allSales = Object.values(salesByProject).flat();
+    const recentSales = allSales.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 10);
 
-    // Aggregate data from projects
-    const totalRevenue = projects.reduce((acc, p) => {
-        const tokensSold = p.totalTokens - p.tokensAvailable;
-        return acc + (tokensSold * p.tokenPrice);
-    }, 0);
+    const totalRevenue = allSales.reduce((acc, sale) => acc + sale.totalCost, 0);
     const activeProjectsCount = projects.filter(p => (p as any).status === 'Verified').length;
-    const energySold = projects.reduce((acc, p) => acc + (p.totalTokens - p.tokensAvailable) * 120, 0); // Assuming 1 token = 120kWh
+    
+    const tokensSold = allSales.reduce((acc, sale) => acc + sale.quantity, 0);
+    const energySold = tokensSold * 120; // Assuming 1 token = 120kWh
+    
     const totalCapacity = projects.reduce((acc, p) => acc + p.capacity, 0);
 
   return (
@@ -340,3 +329,4 @@ function SellerDashboard({ user }: { user: User | null }) {
     </div>
   );
 }
+
