@@ -9,12 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { proposals } from "@/lib/mock-data";
 
-const proposals = [
-  { id: 'GP-001', title: 'Increase Staking Rewards by 5%', status: 'Active' },
-  { id: 'GP-002', title: 'Fund a new solar project in Africa', status: 'Passed' },
-  { id: 'GP-003', title: 'Update platform fee structure', status: 'Failed' },
-];
 
 export default function StakingPage() {
   const [stakedBalance, setStakedBalance] = useState(1000);
@@ -162,10 +159,12 @@ export default function StakingPage() {
                                 <Badge variant={
                                     proposal.status === 'Active' ? 'default' :
                                     proposal.status === 'Passed' ? 'secondary' : 'destructive'
-                                } className={proposal.status === 'Active' ? 'bg-accent text-accent-foreground' : ''}>{proposal.status}</Badge>
+                                } className={proposal.status === 'Active' ? 'bg-primary text-primary-foreground' : ''}>{proposal.status}</Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm">View</Button>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/staking/${proposal.id}`}>View</Link>
+                                </Button>
                             </TableCell>
                         </TableRow>
                     ))}

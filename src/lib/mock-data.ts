@@ -1,4 +1,5 @@
 
+
 import { PlaceHolderImages } from './placeholder-images';
 
 export type SolarProject = {
@@ -145,4 +146,48 @@ export const portfolioAssets: PortfolioAsset[] = [
     { id: 'sp1', name: 'Mojave Solar Park', type: 'Project', quantity: 500, purchasePrice: 95, currentValue: 100 },
     { id: 'ec2', name: 'Thar Desert Array ECT', type: 'Credit', quantity: 2500, purchasePrice: 9, currentValue: 10 },
     { id: 'sp3', name: 'Rooftop Revolution', type: 'Project', quantity: 100, purchasePrice: 125, currentValue: 125 },
+];
+
+export type GovernanceProposal = {
+  id: string;
+  title: string;
+  description: string;
+  status: 'Active' | 'Passed' | 'Failed';
+  votesFor: number;
+  votesAgainst: number;
+  proposer: string;
+  endDate: string;
+}
+
+export const proposals: GovernanceProposal[] = [
+  { 
+    id: 'GP-001', 
+    title: 'Increase Staking Rewards by 5%', 
+    status: 'Active',
+    description: 'This proposal suggests increasing the base APY for staking URJA tokens from 12.5% to 17.5%. The goal is to incentivize more users to stake their tokens, which increases the security and stability of the platform. The additional rewards would be sourced from the community treasury, which currently has a surplus. This change would be active for a period of 6 months, after which it will be re-evaluated.',
+    votesFor: 1234567,
+    votesAgainst: 234567,
+    proposer: '0x1a2b...c3d4',
+    endDate: '2024-08-15',
+  },
+  { 
+    id: 'GP-002', 
+    title: 'Fund a new solar project in Africa', 
+    status: 'Passed',
+    description: 'This proposal seeks to allocate 5,000,000 URJA tokens from the treasury to co-fund the "Sahara Sun" project, a new 50MW solar farm in Nigeria. This aligns with our mission to expand renewable energy access globally. The project has been vetted by our partners and promises a strong return on investment and significant environmental impact.',
+    votesFor: 8765432,
+    votesAgainst: 1234567,
+    proposer: '0x5e6f...a7b8',
+    endDate: '2024-07-01',
+  },
+  { 
+    id: 'GP-003', 
+    title: 'Update platform fee structure', 
+    status: 'Failed',
+    description: 'This proposal suggests a change in the platform\'s fee structure. It proposes reducing the transaction fee from 0.5% to 0.25% for trades over 100,000 URJA, and introducing a small 0.05% fee for staking and unstaking operations to cover network costs. The aim is to attract larger traders while ensuring platform sustainability.',
+    votesFor: 2345678,
+    votesAgainst: 5678901,
+    proposer: '0x9c0d...e1f2',
+    endDate: '2024-06-20',
+  },
 ];
