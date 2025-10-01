@@ -100,15 +100,6 @@ export default function ProfilePage() {
                     </div>
                 </CardContent>
             </Card>
-             <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Notification Settings</CardTitle>
-                    <CardDescription>Manage your email and push notification preferences.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <p className="text-muted-foreground">Notification settings will be available here.</p>
-                </CardContent>
-            </Card>
           </div>
         </div>
       ) : (
