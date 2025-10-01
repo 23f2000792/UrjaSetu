@@ -50,12 +50,9 @@ export default function AssetCard({ project }: { project: SolarProject }) {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
-        <Button variant="outline" asChild>
+      <CardFooter className="p-4 pt-0">
+        <Button variant="outline" asChild className="w-full">
             <Link href={`/marketplace/${project.id}`}>Details</Link>
-        </Button>
-        <Button asChild>
-            <Link href={`/marketplace/${project.id}/trade`}>Buy Now</Link>
         </Button>
       </CardFooter>
     </Card>
