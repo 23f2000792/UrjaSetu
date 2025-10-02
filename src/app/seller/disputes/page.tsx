@@ -2,36 +2,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, getDocs, doc } from "firebase/firestore";
+import { useFirestore, useUser } from "@/firebase";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { SellerDisputeList, Dispute } from "@/components/seller/seller-dispute-list";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { onAuthStateChanged, User } from 'firebase/auth';
 import { Star, MessageSquare, CheckSquare, Gavel } from "lucide-react";
 
 export default function SellerDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [averageRating, setAverageRating] = useState(0);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribeAuth();
-  }, []);
-  
-  useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
         setLoading(false);
         return;
     }
 
     setLoading(true);
 
-    const q = query(collection(db, "disputes"), where("sellerId", "==", user.uid));
+    const q = query(collection(firestore, "disputes"), where("sellerId", "==", user.uid));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const disputesData: Dispute[] = [];
       let totalRating = 0;
@@ -55,7 +48,7 @@ export default function SellerDisputesPage() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, firestore]);
 
   const newDisputes = disputes.filter(d => d.status === 'New').length;
   const underReview = disputes.filter(d => d.status === 'Under Review').length;
