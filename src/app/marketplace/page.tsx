@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AssetCard from "@/components/marketplace/asset-card";
 import ECTCard from "@/components/marketplace/ect-card";
 import { MarketplaceFilters } from "@/components/marketplace/marketplace-filters";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import type { SolarProject, EnergyCredit } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ export default function MarketplacePage() {
   const [projects, setProjects] = useState<SolarProject[]>([]);
   const [credits, setCredits] = useState<EnergyCredit[]>([]);
   const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
 
   // State for filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,7 +24,9 @@ export default function MarketplacePage() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
-    const unsubProjects = onSnapshot(collection(db, "projects"), (snapshot) => {
+    if (!firestore) return;
+
+    const unsubProjects = onSnapshot(collection(firestore, "projects"), (snapshot) => {
       const projectsData: SolarProject[] = [];
       snapshot.forEach((doc) => {
         projectsData.push({ id: doc.id, ...doc.data() } as SolarProject);
@@ -32,7 +35,7 @@ export default function MarketplacePage() {
       setLoading(false);
     });
 
-    const unsubCredits = onSnapshot(collection(db, "energyCredits"), (snapshot) => {
+    const unsubCredits = onSnapshot(collection(firestore, "energyCredits"), (snapshot) => {
         const creditsData: EnergyCredit[] = [];
         snapshot.forEach((doc) => {
             creditsData.push({ id: doc.id, ...doc.data() } as EnergyCredit);
@@ -45,7 +48,7 @@ export default function MarketplacePage() {
         unsubProjects();
         unsubCredits();
     };
-  }, []);
+  }, [firestore]);
 
   const filteredProjects = useMemo(() => {
     return projects
