@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { setDoc, doc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,8 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +46,14 @@ export default function SignupPage() {
         });
         return;
     }
+    if (!auth || !firestore) {
+        toast({
+            title: "Initialization Error",
+            description: "Firebase is not ready. Please try again in a moment.",
+            variant: "destructive",
+        });
+        return;
+    }
     setIsLoading(true);
 
     try {
@@ -51,7 +61,7 @@ export default function SignupPage() {
       const user = userCredential.user;
       
       // Save user role and full name to Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      await setDoc(doc(firestore, "users", user.uid), {
         fullName: fullName,
         email: email,
         role: role,
