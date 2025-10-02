@@ -77,7 +77,7 @@ export default function LandingPage() {
             Login
           </Link>
           <Button asChild>
-            <Link href="/signup">Get Started</Link>
+            <Link href="/signup">Sign Up</Link>
           </Button>
         </nav>
       </header>
@@ -91,14 +91,18 @@ export default function LandingPage() {
                   <h1 className="text-4xl font-bold tracking-tighter text-primary sm:text-5xl xl:text-6xl/none">
                     Empower Solar Energy Through Tokenization.
                   </h1>
+                   <div className="space-y-2">
+                    <p className="text-lg font-semibold text-muted-foreground">ऊर्जासेतु: भविष्यस्य शक्तिः</p>
+                    <p className="text-md text-muted-foreground/80 italic">"UrjaSetu: The Bridge to Future Energy"</p>
+                  </div>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
                     UrjaSetu is a decentralized marketplace for tokenized solar assets. Buy, sell, and stake solar energy tokens seamlessly while making a real-world impact.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Button asChild size="lg">
-                    <Link href="/marketplace">
-                      Explore Marketplace
+                    <Link href="/signup">
+                      Get Started
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
@@ -305,5 +309,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
