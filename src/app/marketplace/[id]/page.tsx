@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Zap, MapPin, TrendingUp, FileText, CheckCircle, Package, Download } from 'lucide-react';
 import Link from 'next/link';
 import PortfolioChart from '@/components/dashboard/portfolio-chart';
-import { db } from '@/lib/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,16 +20,17 @@ export default function AssetDetailPage() {
     const id = params.id as string;
     const [loading, setLoading] = useState(true);
     const [asset, setAsset] = useState<SolarProject | EnergyCredit | null>(null);
+    const firestore = useFirestore();
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
     const collectionName = isCredit ? 'energyCredits' : 'projects';
 
     useEffect(() => {
-        if (!assetId) return;
+        if (!assetId || !firestore) return;
         const fetchAsset = async () => {
             setLoading(true);
-            const docRef = doc(db, collectionName, assetId);
+            const docRef = doc(firestore, collectionName, assetId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
@@ -40,7 +41,7 @@ export default function AssetDetailPage() {
             setLoading(false);
         };
         fetchAsset();
-    }, [assetId, collectionName]);
+    }, [assetId, collectionName, firestore]);
     
     if (loading) {
         return (
@@ -124,7 +125,7 @@ export default function AssetDetailPage() {
                                 <CardDescription>Simulated energy generation over the last 12 months.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <PortfolioChart />
+                                <PortfolioChart role="buyer"/>
                             </CardContent>
                         </Card>
                     )}
