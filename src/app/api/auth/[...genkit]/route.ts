@@ -1,12 +1,12 @@
 
 'use server';
-import {createNextApiHandler} from '@genkit-ai/next';
+import {defineNextApiHandler} from '@genkit-ai/next';
 import {ai} from '@/ai/genkit';
 import {config} from 'dotenv';
 
 config();
 
-export const {GET, POST} = createNextApiHandler({
+export const {GET, POST} = defineNextApiHandler({
   ai,
   auth: {
     providers: [
