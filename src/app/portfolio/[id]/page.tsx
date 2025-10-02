@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Zap, TrendingUp, PieChart, Wallet, ShoppingCart, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit, PortfolioAsset, Transaction } from '@/lib/mock-data';
-import type { User } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PortfolioAssetDetailPage() {
     const params = useParams();
@@ -20,20 +20,14 @@ export default function PortfolioAssetDetailPage() {
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
     const [portfolioInfo, setPortfolioInfo] = useState<{quantity: number, purchasePrice: number} | null>(null);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-            setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, []);
+    const { user, loading: userLoading } = useUser();
+    const firestore = useFirestore();
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id; // This is the raw asset ID (e.g., sp1)
     
     useEffect(() => {
-        if (!assetId || !user) {
+        if (!assetId || !user || !firestore) {
             setLoading(false);
             setMarketAsset(null);
             setPortfolioInfo(null);
@@ -45,7 +39,7 @@ export default function PortfolioAssetDetailPage() {
 
         const fetchMarketAsset = () => {
             const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
-            const marketDocRef = doc(db, marketCollectionName, assetId);
+            const marketDocRef = doc(firestore, marketCollectionName, assetId);
             marketAssetUnsubscribe = onSnapshot(marketDocRef, (marketDocSnap) => {
                 if (marketDocSnap.exists()) {
                     setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
@@ -56,7 +50,7 @@ export default function PortfolioAssetDetailPage() {
         };
 
         const subscribeToTransactions = () => {
-            const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId));
+            const transactionsQuery = query(collection(firestore, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId));
             transactionsUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
                 let totalQuantity = 0;
                 let totalCost = 0;
@@ -89,10 +83,24 @@ export default function PortfolioAssetDetailPage() {
             marketAssetUnsubscribe();
             transactionsUnsubscribe();
         };
-    }, [assetId, isCredit, user]);
+    }, [assetId, isCredit, user, firestore]);
 
-    if (loading) {
-        return <div>Loading asset details...</div>;
+    if (loading || userLoading) {
+        return (
+             <div className="space-y-8">
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-10 w-64" />
+                <div className="grid lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
+                        <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-20 w-full" /></CardContent></Card>
+                    </div>
+                    <div className="space-y-8">
+                         <Card><CardHeader><Skeleton className="h-8 w-40" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></CardContent></Card>
+                    </div>
+                 </div>
+            </div>
+        );
     }
 
     if (!marketAsset || !portfolioInfo) {
@@ -197,5 +205,3 @@ export default function PortfolioAssetDetailPage() {
         </div>
     );
 }
-
-    
