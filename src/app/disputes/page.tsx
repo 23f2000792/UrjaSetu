@@ -7,34 +7,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserDisputeList, Dispute } from "@/components/disputes/user-dispute-list";
-import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { onAuthStateChanged, User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import type { Transaction } from "@/lib/mock-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { useUser, useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function DisputesPage() {
   const [selectedTransaction, setSelectedTransaction] = useState("");
   const [details, setDetails] = useState("");
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
   const [userDisputes, setUserDisputes] = useState<Dispute[]>([]);
   const [userTransactions, setUserTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const { toast } = useToast();
 
-   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
   useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
         setLoadingData(false);
         return;
     };
@@ -43,8 +38,21 @@ export default function DisputesPage() {
 
     // Fetch user's transactions for the dropdown
     const fetchTransactions = async () => {
-        const transQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("type", "==", "Buy"));
-        const querySnapshot = await getDocs(transQuery);
+        const transQuery = query(collection(firestore, "transactions"), where("userId", "==", user.uid), where("type", "==", "Buy"));
+        const querySnapshot = await getDocs(transQuery).catch(err => {
+          const permissionError = new FirestorePermissionError({
+            path: transQuery.path,
+            operation: 'list'
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          return null;
+        });
+
+        if (!querySnapshot) {
+          setLoadingData(false);
+          return;
+        }
+
         const transData: Transaction[] = [];
         querySnapshot.forEach((doc) => {
             transData.push({ id: doc.id, ...doc.data() } as Transaction);
@@ -55,7 +63,7 @@ export default function DisputesPage() {
     fetchTransactions();
 
     // Listen for user's disputes
-    const disputesQuery = query(collection(db, "disputes"), where("userId", "==", user.uid));
+    const disputesQuery = query(collection(firestore, "disputes"), where("userId", "==", user.uid));
     const unsubscribeDisputes = onSnapshot(disputesQuery, (querySnapshot) => {
       const disputesData: Dispute[] = [];
       querySnapshot.forEach((doc) => {
@@ -64,18 +72,22 @@ export default function DisputesPage() {
       setUserDisputes(disputesData.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds));
       setLoadingData(false);
     }, (error) => {
-        console.error("Error fetching user disputes:", error);
+        const permissionError = new FirestorePermissionError({
+            path: disputesQuery.path,
+            operation: 'list'
+        });
+        errorEmitter.emit('permission-error', permissionError);
         toast({ title: "Error", description: "Could not fetch your disputes.", variant: "destructive" });
         setLoadingData(false);
     });
 
     return () => unsubscribeDisputes();
-  }, [user, toast]);
+  }, [user, firestore, toast]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user || !firestore) {
         toast({ title: "Not Authenticated", description: "You must be logged in to file a dispute.", variant: "destructive" });
         return;
     }
@@ -85,34 +97,41 @@ export default function DisputesPage() {
     }
 
     setIsLoading(true);
-    try {
-        const transaction = userTransactions.find(t => t.id === selectedTransaction);
-        if (!transaction) {
-            toast({ title: "Error", description: "Selected transaction not found.", variant: "destructive" });
-            setIsLoading(false);
-            return;
-        }
+    
+    const transaction = userTransactions.find(t => t.id === selectedTransaction);
+    if (!transaction) {
+        toast({ title: "Error", description: "Selected transaction not found.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
 
-        const disputeDocRef = await addDoc(collection(db, "disputes"), {
-            userId: user.uid,
-            userEmail: user.email,
-            transactionId: transaction.id,
-            projectId: transaction.projectId,
-            sellerId: transaction.sellerId, // Make sure sellerId is on transactions
-            details: details,
-            status: "New",
-            createdAt: serverTimestamp(),
-        });
-        
+    const disputeData = {
+        userId: user.uid,
+        userEmail: user.email,
+        transactionId: transaction.id,
+        projectId: transaction.projectId,
+        sellerId: transaction.sellerId, // Make sure sellerId is on transactions
+        details: details,
+        status: "New",
+        createdAt: serverTimestamp(),
+    };
+    
+    const disputesCol = collection(firestore, "disputes");
+    addDoc(disputesCol, disputeData).then(() => {
         toast({ title: "Success", description: "Your dispute has been filed." });
         setSelectedTransaction("");
         setDetails("");
-    } catch (error) {
-        console.error("Error filing dispute: ", error);
+    }).catch(error => {
+        const permissionError = new FirestorePermissionError({
+          path: disputesCol.path,
+          operation: 'create',
+          requestResourceData: disputeData
+        });
+        errorEmitter.emit('permission-error', permissionError);
         toast({ title: "Error", description: "There was a problem filing your dispute. Check Firestore rules.", variant: "destructive" });
-    } finally {
+    }).finally(() => {
         setIsLoading(false);
-    }
+    });
   }
 
 

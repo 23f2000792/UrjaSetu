@@ -10,15 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Upload } from "lucide-react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-
+import { useUser, useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function DocumentUploadForm() {
     const [file, setFile] = useState<File | null>(null);
     const [documentType, setDocumentType] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const { user } = useUser();
+    const firestore = useFirestore();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -27,8 +30,7 @@ export default function DocumentUploadForm() {
     }
 
     const handleUpload = async () => {
-        const user = auth.currentUser;
-        if (!user) {
+        if (!user || !firestore) {
             toast({ title: "Not Authenticated", description: "You must be logged in to upload documents.", variant: "destructive" });
             return;
         }
@@ -48,13 +50,23 @@ export default function DocumentUploadForm() {
             const downloadURL = await getDownloadURL(snapshot.ref);
 
             // Add document metadata to Firestore
-            await addDoc(collection(db, "documents"), {
+            const docData = {
                 ownerId: user.uid,
                 fileName: file.name,
                 fileURL: downloadURL,
                 fileType: documentType,
                 status: "Pending",
                 uploadedAt: serverTimestamp(),
+            };
+            const docsCol = collection(firestore, "documents");
+            await addDoc(docsCol, docData).catch(err => {
+                const permissionError = new FirestorePermissionError({
+                    path: docsCol.path,
+                    operation: 'create',
+                    requestResourceData: docData
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                throw err;
             });
 
             toast({ title: "Success", description: "Document uploaded for review." });
@@ -70,9 +82,7 @@ export default function DocumentUploadForm() {
         } finally {
             setIsLoading(false);
         }
-
     }
-
 
     return (
         <Card>

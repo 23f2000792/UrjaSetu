@@ -2,16 +2,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import DocumentReviewList, { Document } from "@/components/admin/document-review-list";
+import { useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminDocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
 
   useEffect(() => {
-    const q = query(collection(db, "documents"), where("status", "==", "Pending"));
+    if (!firestore) return;
+
+    const q = query(collection(firestore, "documents"), where("status", "==", "Pending"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const docsData: Document[] = [];
       querySnapshot.forEach((doc) => {
@@ -20,12 +25,16 @@ export default function AdminDocumentsPage() {
       setDocuments(docsData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching documents:", error);
+      const permissionError = new FirestorePermissionError({
+        path: q.path,
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [firestore]);
 
   return (
     <div className="space-y-8">

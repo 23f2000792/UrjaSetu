@@ -45,10 +45,10 @@ import {
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'; 
-import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from "firebase/firestore";
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useState, useEffect } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
 
 
 const userNavItems = [
@@ -79,17 +79,23 @@ export function AppSidebar({ onChatToggle }: { onChatToggle: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
-      if (user) {
+      if (user && firestore) {
         setUser(user);
-        const docRef = doc(db, "users", user.uid);
+        const docRef = doc(firestore, "users", user.uid);
         try {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
@@ -125,11 +131,12 @@ export function AppSidebar({ onChatToggle }: { onChatToggle: () => void }) {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [auth, firestore]);
 
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
   
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await firebaseSignOut(auth);
       localStorage.removeItem('userRole');

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Timestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel } from "lucide-react";
+import Link from "next/link";
 
 export interface Dispute {
   id: string;
@@ -71,7 +72,9 @@ export function AdminDisputeList({ disputes, loading }: AdminDisputeListProps) {
                                     </TableCell>
                                     <TableCell>{formatDate(dispute.createdAt)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">Review Case</Button>
+                                        <Button asChild variant="outline" size="sm">
+                                            <Link href={`/disputes/${dispute.id}`}>Review Case</Link>
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))

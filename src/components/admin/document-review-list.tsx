@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Download, XCircle } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, doc, updateDoc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText } from "lucide-react";
+import { useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export interface Document {
   id: string;
@@ -30,23 +31,32 @@ interface DocumentReviewListProps {
 
 export default function DocumentReviewList({ documents, loading }: DocumentReviewListProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handleUpdateStatus = async (id: string, status: 'Approved' | 'Rejected') => {
-    const docRef = doc(db, "documents", id);
-    try {
-      await updateDoc(docRef, { status: status });
+    if (!firestore) return;
+
+    const docRef = doc(firestore, "documents", id);
+    const updateData = { status };
+
+    updateDoc(docRef, updateData).then(() => {
       toast({
         title: "Success",
         description: `Document has been ${status.toLowerCase()}.`,
       });
-    } catch (error) {
-      console.error("Error updating document status: ", error);
+    }).catch(error => {
+      const permissionError = new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'update',
+        requestResourceData: updateData
+      });
+      errorEmitter.emit('permission-error', permissionError);
       toast({
         title: "Error",
         description: "Could not update the document status.",
         variant: "destructive",
       });
-    }
+    });
   };
 
   const formatDate = (timestamp: Timestamp) => {

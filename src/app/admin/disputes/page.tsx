@@ -2,18 +2,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { AdminDisputeList, Dispute } from "@/components/admin/admin-dispute-list";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
   
   useEffect(() => {
-    const q = query(collection(db, "disputes"));
+    if (!firestore) return;
+
+    const q = query(collection(firestore, "disputes"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const disputesData: Dispute[] = [];
       querySnapshot.forEach((doc) => {
@@ -22,12 +27,16 @@ export default function AdminDisputesPage() {
       setDisputes(disputesData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching disputes:", error);
+      const permissionError = new FirestorePermissionError({
+        path: q.path,
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [firestore]);
 
   const newDisputes = disputes.filter(d => d.status === 'New').length;
   const underReview = disputes.filter(d => d.status === 'Under Review').length;

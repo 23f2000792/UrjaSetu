@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Zap, Leaf, DollarSign, ListTree, Sun } from "lucide-react";
 import PortfolioChart from "@/components/dashboard/portfolio-chart";
 import RecentActivity from "@/components/dashboard/recent-activity";
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { useCollection, useDoc, useUser, useFirestore } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
 import type { PortfolioAsset, SolarProject, Transaction, EnergyCredit } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -16,134 +15,79 @@ import { Skeleton } from '@/components/ui/skeleton';
 const CurrencyIcon = () => <span className="h-4 w-4 text-muted-foreground">Rs.</span>;
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const docRef = doc(db, "users", user.uid);
-        try {
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setRole(docSnap.data().role);
-          } else {
-            console.log("No such user document!");
-            setRole('buyer'); // Default to buyer if no role found
-          }
-        } catch (error) {
-            console.error("Error getting user document:", error);
-            setRole('buyer'); // Default to buyer on error
-        }
-      } else {
-        // User is signed out
-        setUser(null);
-        setRole(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+  const { data: userProfile, loading: profileLoading } = useDoc<any>(user && firestore ? doc(firestore, "users", user.uid) : null);
+  
+  const loading = userLoading || profileLoading;
 
   if (loading) {
     return <div>Loading dashboard...</div>;
   }
 
-  if (role === 'seller') {
+  if (userProfile?.role === 'seller') {
     return <SellerDashboard user={user} />;
   }
   
-  // Default to UserDashboard if role is 'buyer' or not set (for fallback)
   return <UserDashboard user={user} />;
 }
 
 
-function UserDashboard({ user }: { user: User | null }) {
+function UserDashboard({ user }: { user: any | null }) {
+    const firestore = useFirestore();
     const [portfolioValue, setPortfolioValue] = useState(0);
     const [energyGenerated, setEnergyGenerated] = useState(0);
     const [carbonOffset, setCarbonOffset] = useState(0);
-    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-    const [loading, setLoading] = useState(true);
+    
+    const { data: transactions, loading: transactionsLoading } = useCollection<Transaction>(
+        user && firestore ? query(collection(firestore, "transactions"), where("userId", "==", user.uid)) : null
+    );
+    const { data: projects, loading: projectsLoading } = useCollection<SolarProject>(
+        user && firestore ? collection(firestore, "projects") : null
+    );
+    const { data: credits, loading: creditsLoading } = useCollection<EnergyCredit>(
+        user && firestore ? collection(firestore, "energyCredits") : null
+    );
+
+    const loading = transactionsLoading || projectsLoading || creditsLoading;
 
     useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            // Clear data on logout
-            setPortfolioValue(0);
-            setEnergyGenerated(0);
-            setCarbonOffset(0);
-            setRecentTransactions([]);
-            return;
-        }
+        if (loading || !transactions || !projects || !credits) return;
 
-        setLoading(true);
+        const projectsData = new Map(projects.map(p => [p.id, p]));
+        const creditsData = new Map(credits.map(c => [c.id, c]));
 
-        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
-        const projectsQuery = collection(db, "projects");
-        const creditsQuery = collection(db, "energyCredits");
+        const aggregatedAssets: { [key: string]: { quantity: number; currentValue: number } } = {};
 
-        // Use a single listener that composes the others to ensure cleanup
-        const unsubTransactions = onSnapshot(transactionsQuery, (transactionsSnapshot) => {
-            const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
-                const unsubCredits = onSnapshot(creditsQuery, (creditsSnapshot) => {
-                    
-                    const projectsData = new Map<string, SolarProject>();
-                    projectsSnapshot.forEach(doc => projectsData.set(doc.id, doc.data() as SolarProject));
-                    
-                    const creditsData = new Map<string, EnergyCredit>();
-                    creditsSnapshot.forEach(doc => creditsData.set(doc.id, doc.data() as EnergyCredit));
+        transactions.forEach(tx => {
+            if (tx.type !== 'Buy') return;
 
-                    const userTransactions: Transaction[] = [];
-                    transactionsSnapshot.forEach((doc) => {
-                        userTransactions.push({ id: doc.id, ...doc.data() } as Transaction);
-                    });
-                    
-                    const aggregatedAssets: { [key: string]: { quantity: number; currentValue: number } } = {};
+            const assetId = tx.projectId;
+            const marketAsset = projectsData.get(assetId) || creditsData.get(assetId);
+            const currentValue = (marketAsset as any)?.tokenPrice || (marketAsset as any)?.price || 0;
 
-                    userTransactions.forEach(tx => {
-                        if (tx.type !== 'Buy') return;
-
-                        const assetId = tx.projectId;
-                        const marketAsset = projectsData.get(assetId) || creditsData.get(assetId);
-                        const currentValue = (marketAsset as any)?.tokenPrice || (marketAsset as any)?.price || 0;
-
-                        if (!aggregatedAssets[assetId]) {
-                            aggregatedAssets[assetId] = { quantity: 0, currentValue: currentValue };
-                        }
-                        
-                        aggregatedAssets[assetId].quantity += tx.quantity;
-                        aggregatedAssets[assetId].currentValue = currentValue; // Ensure current value is updated
-                    });
-                    
-                    let totalValue = 0;
-                    let totalEnergy = 0;
-                    Object.values(aggregatedAssets).forEach(asset => {
-                        totalValue += asset.quantity * asset.currentValue;
-                        // Assuming 1 token = 120kWh generated over its lifetime so far
-                        totalEnergy += asset.quantity * 120;
-                    });
-
-                    setPortfolioValue(totalValue);
-                    setEnergyGenerated(totalEnergy);
-                    // Assuming 1 kWh = 0.707 kg CO2e
-                    setCarbonOffset(totalEnergy * 0.707);
-
-                    setRecentTransactions(userTransactions.sort((a,b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 5));
-                    setLoading(false);
-                });
-                return unsubCredits; // This doesn't actually work as intended for cleanup
-            });
-            // return unsubProjects; // This also doesn't work
+            if (!aggregatedAssets[assetId]) {
+                aggregatedAssets[assetId] = { quantity: 0, currentValue: currentValue };
+            }
+            
+            aggregatedAssets[assetId].quantity += tx.quantity;
+            aggregatedAssets[assetId].currentValue = currentValue;
+        });
+        
+        let totalValue = 0;
+        let totalEnergy = 0;
+        Object.values(aggregatedAssets).forEach(asset => {
+            totalValue += asset.quantity * asset.currentValue;
+            totalEnergy += asset.quantity * 120;
         });
 
-        // The correct way to return cleanup functions from a `useEffect`
-        return () => {
-            unsubTransactions();
-        };
-    }, [user]);
+        setPortfolioValue(totalValue);
+        setEnergyGenerated(totalEnergy);
+        setCarbonOffset(totalEnergy * 0.707);
+
+    }, [transactions, projects, credits, loading]);
+
+    const recentTransactions = transactions?.sort((a,b) => (b.timestamp as any).seconds - (a.timestamp as any).seconds).slice(0, 5) || [];
 
   return (
     <div className="space-y-8">
@@ -204,71 +148,27 @@ function UserDashboard({ user }: { user: User | null }) {
   );
 }
 
-function SellerDashboard({ user }: { user: User | null }) {
-    const [projects, setProjects] = useState<SolarProject[]>([]);
-    const [salesByProject, setSalesByProject] = useState<{ [projectId: string]: Transaction[] }>({});
-    const [loading, setLoading] = useState(true);
+function SellerDashboard({ user }: { user: any | null }) {
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            setProjects([]);
-            setSalesByProject({});
-            return;
-        }
+    const { data: projects, loading: projectsLoading } = useCollection<SolarProject>(
+        user && firestore ? query(collection(firestore, "projects"), where("ownerId", "==", user.uid)) : null
+    );
 
-        setLoading(true);
-        const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
-        
-        const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
-            const projectsData: SolarProject[] = [];
-            const projectIds: string[] = [];
-            
-            projectsSnapshot.forEach((doc) => {
-                const project = { id: doc.id, ...doc.data() } as SolarProject;
-                projectsData.push(project);
-                projectIds.push(project.id);
-            });
-            setProjects(projectsData);
-            setLoading(false);
+    const projectIds = projects?.map(p => p.id) || [];
 
-            if (projectIds.length === 0) return;
-            
-            // Set up listeners for each project's transactions
-            const salesQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
-            const unsubSales = onSnapshot(salesQuery, (salesSnapshot) => {
-                const salesByProjectData: { [projectId: string]: Transaction[] } = {};
-                projectIds.forEach(id => salesByProjectData[id] = []);
-
-                salesSnapshot.forEach(doc => {
-                    const sale = { id: doc.id, ...doc.data() } as Transaction;
-                    if(salesByProjectData[sale.projectId]) {
-                        salesByProjectData[sale.projectId].push(sale);
-                    }
-                });
-                setSalesByProject(salesByProjectData);
-            });
-
-            return () => {
-                unsubSales();
-            };
-        });
-
-        return () => {
-            unsubProjects();
-        };
-    }, [user]);
-
-    const allSales = Object.values(salesByProject).flat();
-    const recentSales = allSales.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).slice(0, 10);
-
-    const totalRevenue = allSales.reduce((acc, sale) => acc + sale.totalCost, 0);
-    const activeProjectsCount = projects.filter(p => (p as any).status === 'Verified').length;
+    const { data: sales, loading: salesLoading } = useCollection<Transaction>(
+        user && firestore && projectIds.length > 0 ? query(collection(firestore, "transactions"), where("projectId", "in", projectIds)) : null
+    );
     
-    const tokensSold = allSales.reduce((acc, sale) => acc + sale.quantity, 0);
-    const energySold = tokensSold * 120; // Assuming 1 token = 120kWh
-    
-    const totalCapacity = projects.reduce((acc, p) => acc + p.capacity, 0);
+    const loading = projectsLoading || salesLoading;
+
+    const recentSales = sales?.sort((a, b) => (b.timestamp as any).seconds - (a.timestamp as any).seconds).slice(0, 10) || [];
+    const totalRevenue = sales?.reduce((acc, sale) => acc + sale.totalCost, 0) || 0;
+    const activeProjectsCount = projects?.filter(p => (p as any).status === 'Verified').length || 0;
+    const tokensSold = sales?.reduce((acc, sale) => acc + sale.quantity, 0) || 0;
+    const energySold = tokensSold * 120;
+    const totalCapacity = projects?.reduce((acc, p) => acc + p.capacity, 0) || 0;
 
   return (
     <div className="space-y-8">
@@ -340,5 +240,3 @@ function SellerDashboard({ user }: { user: User | null }) {
     </div>
   );
 }
-
-    

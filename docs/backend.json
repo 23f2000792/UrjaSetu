@@ -1,0 +1,118 @@
+
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role.",
+          "enum": ["buyer", "seller", "admin"]
+        }
+      },
+      "required": ["fullName", "email", "role"]
+    },
+    "project": {
+      "title": "Solar Project",
+      "description": "A solar project listed on the marketplace.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "capacity": {
+          "type": "number"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      }
+    },
+    "transaction": {
+      "title": "Transaction",
+      "description": "A transaction for buying or selling assets.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "totalCost": {
+          "type": "number"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Buy", "Sell"]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "energyCredit": {
+      "title": "Energy Credit",
+      "description": "A token representing generated energy.",
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "price": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["email"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/user"
+      },
+      "description": "User profile information."
+    },
+    "/projects/{projectId}": {
+      "schema": {
+        "$ref": "#/entities/project"
+      },
+      "description": "Solar projects available on the marketplace."
+    },
+    "/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/transaction"
+      },
+      "description": "All transactions that have occurred."
+    },
+    "/energyCredits/{creditId}": {
+      "schema": {
+        "$ref": "#/entities/energyCredit"
+      },
+      "description": "Tradable energy credits."
+    }
+  }
+}

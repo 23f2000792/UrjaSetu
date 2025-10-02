@@ -3,8 +3,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter }from 'next/navigation';
-import { doc, getDoc, Timestamp, collection, addDoc, query, onSnapshot, orderBy, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { doc, getDoc, Timestamp, collection, addDoc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,9 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth, useFirestore, useUser } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 interface Dispute {
     id: string;
@@ -41,93 +43,110 @@ export default function DisputeDetailPage() {
     const router = useRouter();
     const { toast } = useToast();
     const id = params.id as string;
+    const firestore = useFirestore();
+    const auth = useAuth();
+    const { user, loading: userLoading } = useUser();
 
     const [dispute, setDispute] = useState<Dispute | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<FirebaseUser | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [hoveredRating, setHoveredRating] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
-            if (currentUser) {
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                setUserRole(userDoc.data()?.role || 'buyer');
-            } else {
-                setUserRole(null);
-            }
+        if (!user || !firestore) return;
+        getDoc(doc(firestore, 'users', user.uid)).then(userDoc => {
+            setUserRole(userDoc.data()?.role || 'buyer');
         });
-        return () => unsubscribe();
-    }, []);
+    }, [user, firestore]);
 
     useEffect(() => {
-        if (!id) return;
+        if (!id || !firestore) return;
 
-        const unsubDispute = onSnapshot(doc(db, "disputes", id), (docSnap) => {
+        const unsubDispute = onSnapshot(doc(firestore, "disputes", id), (docSnap) => {
             if (docSnap.exists()) {
                 setDispute({ id: docSnap.id, ...docSnap.data() } as Dispute);
             } else {
                 console.log("No such dispute!");
             }
             setLoading(false);
+        }, (err) => {
+             const permissionError = new FirestorePermissionError({ path: `disputes/${id}`, operation: 'get' });
+             errorEmitter.emit('permission-error', permissionError);
         });
 
-        const q = query(collection(db, "disputes", id, "messages"), orderBy("timestamp", "asc"));
+        const q = query(collection(firestore, "disputes", id, "messages"), orderBy("timestamp", "asc"));
         const unsubMessages = onSnapshot(q, (snapshot) => {
             const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
             setMessages(msgs);
+        }, (err) => {
+            const permissionError = new FirestorePermissionError({ path: `disputes/${id}/messages`, operation: 'list' });
+            errorEmitter.emit('permission-error', permissionError);
         });
 
         return () => {
             unsubDispute();
             unsubMessages();
         };
-    }, [id]);
+    }, [id, firestore]);
 
      useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || !user) return;
-        try {
-            await addDoc(collection(db, "disputes", id, "messages"), {
-                text: newMessage,
-                authorId: user.uid,
-                authorEmail: user.email,
-                timestamp: Timestamp.now()
+        if (!newMessage.trim() || !user || !firestore) return;
+        const messageData = {
+            text: newMessage,
+            authorId: user.uid,
+            authorEmail: user.email,
+            timestamp: Timestamp.now()
+        };
+        const messagesCol = collection(firestore, "disputes", id, "messages");
+        addDoc(messagesCol, messageData).catch(err => {
+            const permissionError = new FirestorePermissionError({
+                path: messagesCol.path,
+                operation: 'create',
+                requestResourceData: messageData
             });
-            setNewMessage("");
-        } catch (error) {
-            console.error("Error sending message:", error);
+            errorEmitter.emit('permission-error', permissionError);
             toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
-        }
+        });
+        setNewMessage("");
     };
 
     const handleStatusUpdate = async (status: 'Resolved' | 'Under Review') => {
-        if (!dispute) return;
-        try {
-            await updateDoc(doc(db, "disputes", id), { status });
+        if (!dispute || !firestore) return;
+        const docRef = doc(firestore, "disputes", id);
+        updateDoc(docRef, { status }).then(() => {
             toast({ title: "Status Updated", description: `Dispute marked as ${status}.` });
-        } catch (error) {
-            console.error("Error updating status:", error);
-             toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
-        }
+        }).catch(err => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'update',
+                requestResourceData: { status }
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+        });
     };
 
     const handleRating = async (rating: number) => {
-        if (dispute?.rating) return; // Already rated
-        try {
-            await updateDoc(doc(db, "disputes", id), { rating });
+        if (dispute?.rating || !firestore) return; // Already rated
+        const docRef = doc(firestore, "disputes", id);
+        updateDoc(docRef, { rating }).then(() => {
             toast({ title: "Thank You!", description: "Your rating has been submitted." });
-        } catch (error) {
-            console.error("Error submitting rating:", error);
+        }).catch(err => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'update',
+                requestResourceData: { rating }
+            });
+            errorEmitter.emit('permission-error', permissionError);
             toast({ title: "Error", description: "Failed to submit rating.", variant: "destructive" });
-        }
+        });
     };
     
     const formatDate = (timestamp: Timestamp | Date) => {
@@ -145,7 +164,7 @@ export default function DisputeDetailPage() {
     }
 
 
-    if (loading) {
+    if (loading || userLoading) {
         return (
             <div className="space-y-8">
                  <Skeleton className="h-8 w-40" />

@@ -11,10 +11,9 @@ import { Loader2, Send, MessageSquare, Wand2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { chatWithBot } from "@/ai/flows/ai-chatbot";
 import { useToast } from "@/hooks/use-toast";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { User as FirebaseUser } from 'firebase/auth';
+import { useUser, useFirestore } from "@/firebase";
 
 type Message = {
   id: string;
@@ -32,22 +31,21 @@ export default function ChatPanel({ isOpen, onOpenChange }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [role, setRole] = useState<'buyer' | 'seller' | 'admin'>('buyer');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+    if (user && firestore) {
+      const userDocRef = doc(firestore, "users", user.uid);
+      getDoc(userDocRef).then(userDoc => {
         if (userDoc.exists()) {
           setRole(userDoc.data().role);
         }
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+      });
+    }
+  }, [user, firestore]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

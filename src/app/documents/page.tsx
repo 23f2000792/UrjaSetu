@@ -4,31 +4,27 @@
 import { useEffect, useState } from "react";
 import DocumentUploadForm from "@/components/documents/document-upload-form";
 import DocumentList, { Document } from "@/components/documents/document-list";
-import { auth, db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from 'firebase/auth';
+import { useUser, useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
       setLoading(false);
       return;
     }
 
-    const q = query(collection(db, "documents"), where("ownerId", "==", user.uid));
+    const q = query(collection(firestore, "documents"), where("ownerId", "==", user.uid));
     const unsubscribe = onSnapshot(q, 
       (querySnapshot) => {
         const docsData: Document[] = [];
@@ -39,7 +35,8 @@ export default function DocumentsPage() {
         setLoading(false);
       },
       (error) => {
-        console.error("Error fetching documents:", error);
+        const permissionError = new FirestorePermissionError({ path: q.path, operation: 'list'});
+        errorEmitter.emit('permission-error', permissionError);
         toast({
           title: "Error",
           description: "Could not fetch your documents.",
@@ -50,7 +47,7 @@ export default function DocumentsPage() {
     );
 
     return () => unsubscribe();
-  }, [user, toast]);
+  }, [user, firestore, toast]);
 
   return (
     <div className="space-y-8">
@@ -60,7 +57,7 @@ export default function DocumentsPage() {
       </p>
       
       <DocumentUploadForm />
-      <DocumentList documents={documents} loading={loading} />
+      <DocumentList documents={documents} loading={loading || userLoading} />
 
     </div>
   );
