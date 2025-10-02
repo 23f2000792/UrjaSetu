@@ -12,9 +12,8 @@ import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { collection, onSnapshot, query, where, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { User } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -36,7 +35,8 @@ type ReportingData = {
 }
 
 export default function ReportingPage() {
-    const [user, setUser] = useState<User | null>(null);
+    const { user, loading: userLoading } = useUser();
+    const firestore = useFirestore();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ReportingData[]>([]);
     const [date, setDate] = useState<DateRange | undefined>(undefined);
@@ -51,21 +51,16 @@ export default function ReportingPage() {
     }, []);
 
     useEffect(() => {
-        const unsubscribeAuth = auth.onAuthStateChanged(setUser);
-        return () => unsubscribeAuth();
-    }, []);
-
-    useEffect(() => {
-        if (!user || !date?.from) {
+        if (!user || !firestore || !date?.from) {
             setData([]);
-            if(user) setLoading(false);
+            setLoading(false);
             return;
         };
 
         setLoading(true);
 
         const q = query(
-            collection(db, "transactions"),
+            collection(firestore, "transactions"),
             where("userId", "==", user.uid),
             where("timestamp", ">=", Timestamp.fromDate(date.from)),
             where("timestamp", "<=", Timestamp.fromDate(date.to || date.from))
@@ -102,7 +97,7 @@ export default function ReportingPage() {
         });
 
         return () => unsubscribe();
-    }, [user, date]);
+    }, [user, firestore, date]);
 
     const totalGenerated = data.reduce((acc, item) => acc + item.generated, 0);
     const totalOffset = data.reduce((acc, item) => acc + item.offset, 0);
@@ -194,7 +189,7 @@ export default function ReportingPage() {
                   <CardTitle className="flex items-center gap-2"><Zap /> Total Energy Generated</CardTitle>
               </CardHeader>
               <CardContent>
-                  {loading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalGenerated.toLocaleString()} kWh</p>}
+                  {loading || userLoading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalGenerated.toLocaleString()} kWh</p>}
                   <p className="text-sm text-muted-foreground">in the selected period</p>
               </CardContent>
           </Card>
@@ -203,7 +198,7 @@ export default function ReportingPage() {
                   <CardTitle className="flex items-center gap-2"><Leaf /> Total Carbon Offset</CardTitle>
               </CardHeader>
               <CardContent>
-                  {loading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalOffset.toLocaleString()} kg CO₂e</p>}
+                  {loading || userLoading ? <Skeleton className="h-10 w-1/2" /> : <p className="text-4xl font-bold text-primary">{totalOffset.toLocaleString()} kg CO₂e</p>}
                   <p className="text-sm text-muted-foreground">Equivalent to planting {Math.round(totalOffset/58).toLocaleString()} trees</p>
               </CardContent>
           </Card>
@@ -215,7 +210,7 @@ export default function ReportingPage() {
             <CardDescription>Energy generation and carbon offset over the selected period.</CardDescription>
         </CardHeader>
         <CardContent>
-            {loading ? (
+            {loading || userLoading ? (
                 <div className="h-[400px] w-full flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
                 </div>
