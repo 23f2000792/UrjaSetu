@@ -20,10 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { auth, db } from '@/lib/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, collection, serverTimestamp, runTransaction, DocumentReference } from 'firebase/firestore';
 import type { SolarProject, EnergyCredit, Transaction } from '@/lib/mock-data';
-import type { User } from 'firebase/auth';
 
 export default function TradePage() {
     const params = useParams();
@@ -36,24 +35,19 @@ export default function TradePage() {
     const [asset, setAsset] = useState<SolarProject | EnergyCredit | null>(null);
     const [loading, setLoading] = useState(true);
     const [isPurchasing, setIsPurchasing] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-          setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, []);
+    
+    const { user } = useUser();
+    const firestore = useFirestore();
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
     const collectionName = isCredit ? 'energyCredits' : 'projects';
 
     useEffect(() => {
-        if (!assetId) return;
+        if (!assetId || !firestore) return;
         const fetchAsset = async () => {
             setLoading(true);
-            const docRef = doc(db, collectionName, assetId);
+            const docRef = doc(firestore, collectionName, assetId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
@@ -64,14 +58,14 @@ export default function TradePage() {
             setLoading(false);
         };
         fetchAsset();
-    }, [assetId, collectionName]);
+    }, [assetId, collectionName, firestore]);
 
     const handlePurchase = async () => {
         if (!user) {
             toast({ title: "Not Authenticated", description: "You must be logged in to make a purchase.", variant: "destructive" });
             return;
         }
-        if (!asset) {
+        if (!asset || !firestore) {
              toast({ title: "Error", description: "Asset could not be loaded.", variant: "destructive" });
             return;
         }
@@ -79,8 +73,8 @@ export default function TradePage() {
         setIsPurchasing(true);
         
         try {
-            await runTransaction(db, async (transaction) => {
-                const projectRef = doc(db, collectionName, assetId);
+            await runTransaction(firestore, async (transaction) => {
+                const projectRef = doc(firestore, collectionName, assetId);
                 const projectDoc = await transaction.get(projectRef);
 
                 if (!projectDoc.exists()) {
@@ -103,7 +97,7 @@ export default function TradePage() {
                 });
                 
                 // Create a new transaction document
-                const transactionRef = doc(collection(db, "transactions"));
+                const transactionRef = doc(collection(firestore, "transactions"));
                 const transactionData: Omit<Transaction, 'id'> = {
                     userId: user.uid,
                     sellerId: sellerId,
