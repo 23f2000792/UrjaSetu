@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import { useState, useEffect } from 'react';
 import type { UserProfile, Transaction } from "@/lib/mock-data";
 
@@ -17,13 +17,16 @@ export default function LeaderboardPage() {
   const [topTraders, setTopTraders] = useState<UserProfile[]>([]);
   const [topOffsetters, setTopOffsetters] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
 
   useEffect(() => {
+    if (!firestore) return;
+
     const fetchLeaderboardData = async () => {
       setLoading(true);
       try {
         // 1. Fetch all users and filter for buyers
-        const usersQuery = query(collection(db, "users"), where("role", "==", "buyer"));
+        const usersQuery = query(collection(firestore, "users"), where("role", "==", "buyer"));
         const usersSnapshot = await getDocs(usersQuery);
         const userMap = new Map<string, UserProfile>();
         usersSnapshot.forEach(doc => {
@@ -31,7 +34,7 @@ export default function LeaderboardPage() {
         });
 
         // 2. Fetch all transactions
-        const transactionsQuery = query(collection(db, "transactions"), where("type", "==", "Buy"));
+        const transactionsQuery = query(collection(firestore, "transactions"), where("type", "==", "Buy"));
         const transactionsSnapshot = await getDocs(transactionsQuery);
         
         // 3. Aggregate data
@@ -76,7 +79,7 @@ export default function LeaderboardPage() {
     };
 
     fetchLeaderboardData();
-  }, []);
+  }, [firestore]);
 
   const renderTableRows = (users: UserProfile[], valueKey: 'volume' | 'offset', unit: string) => {
     if (loading) {
