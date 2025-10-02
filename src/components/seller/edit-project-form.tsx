@@ -11,9 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { type SolarProject } from "@/lib/mock-data";
 import { Loader2, Edit, DollarSign, Zap, Package, Trash2 } from "lucide-react";
+import { useFirestore } from "@/firebase";
 
 interface EditProjectFormProps {
     project: SolarProject;
@@ -25,6 +25,7 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
+    const firestore = useFirestore();
     
     // Form state
     const [name, setName] = useState(project.name);
@@ -38,9 +39,10 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!firestore) return;
         setIsLoading(true);
 
-        const projectRef = doc(db, "projects", project.id);
+        const projectRef = doc(firestore, "projects", project.id);
         const newTotalTokens = Number(totalTokens);
         const oldTotalTokens = project.totalTokens;
         
@@ -80,9 +82,10 @@ export default function EditProjectForm({ project }: EditProjectFormProps) {
     };
 
     const handleDelete = async () => {
+        if (!firestore) return;
         setIsDeleting(true);
         try {
-            await deleteDoc(doc(db, "projects", project.id));
+            await deleteDoc(doc(firestore, "projects", project.id));
             toast({
                 title: "Project Deleted",
                 description: `${project.name} has been permanently deleted.`,

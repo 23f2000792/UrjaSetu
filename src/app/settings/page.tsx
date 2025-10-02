@@ -12,11 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, User, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { User, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Loader2, KeyRound } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { useAuth, useFirestore, useUser } from "@/firebase";
 
 const profileFormSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters.").max(50, "Full name is too long."),
@@ -29,7 +28,9 @@ const passwordFormSchema = z.object({
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: userLoading } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
@@ -49,24 +50,25 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
+    const fetchProfile = async () => {
+      if (user && firestore) {
+        const userDocRef = doc(firestore, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           profileForm.setValue("fullName", userDoc.data().fullName);
         }
       }
-    });
-    return () => unsubscribe();
-  }, [profileForm]);
+    };
+    if (!userLoading) {
+        fetchProfile();
+    }
+  }, [user, userLoading, firestore, profileForm]);
 
   const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
-    if (!user) return;
+    if (!user || !firestore) return;
     setIsProfileLoading(true);
     try {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(firestore, "users", user.uid);
       await updateDoc(userDocRef, { fullName: values.fullName });
       toast({ title: "Success", description: "Your profile has been updated." });
     } catch (error) {
@@ -78,7 +80,7 @@ export default function SettingsPage() {
   };
   
   const onPasswordSubmit = async (values: z.infer<typeof passwordFormSchema>) => {
-      if (!user || !user.email) {
+      if (!user || !user.email || !auth) {
           toast({ title: "Error", description: "User not properly authenticated.", variant: "destructive" });
           return;
       }
@@ -130,8 +132,8 @@ export default function SettingsPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isProfileLoading}>
-                {isProfileLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isProfileLoading || userLoading}>
+                {(isProfileLoading || userLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
             </form>
@@ -197,8 +199,8 @@ export default function SettingsPage() {
                         </FormItem>
                         )}
                     />
-                     <Button type="submit" disabled={isPasswordLoading}>
-                        {isPasswordLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                     <Button type="submit" disabled={isPasswordLoading || userLoading}>
+                        {(isPasswordLoading || userLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Change Password
                     </Button>
                 </form>

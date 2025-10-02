@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { doc, getDoc, onSnapshot, query, collection, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, onSnapshot, query, collection, where, orderBy } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BarChart2, ListOrdered, CircleDollarSign } from "lucide-react";
@@ -15,6 +14,7 @@ import type { SolarProject, Transaction } from "@/lib/mock-data";
 import EditProjectForm from "@/components/seller/edit-project-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useFirestore } from "@/firebase";
 
 export default function ManageProjectPage() {
     const params = useParams();
@@ -23,11 +23,12 @@ export default function ManageProjectPage() {
     const [project, setProject] = useState<SolarProject | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const firestore = useFirestore();
 
     useEffect(() => {
-        if (!id) return;
+        if (!id || !firestore) return;
 
-        const docRef = doc(db, "projects", id);
+        const docRef = doc(firestore, "projects", id);
         const unsubscribeProject = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 setProject({ id: docSnap.id, ...docSnap.data() } as SolarProject);
@@ -39,7 +40,7 @@ export default function ManageProjectPage() {
         });
 
         const transactionsQuery = query(
-            collection(db, "transactions"), 
+            collection(firestore, "transactions"), 
             where("projectId", "==", id),
             orderBy("timestamp", "desc")
         );
@@ -56,7 +57,7 @@ export default function ManageProjectPage() {
             unsubscribeProject();
             unsubscribeTransactions();
         };
-    }, [id]);
+    }, [id, firestore]);
 
     if (loading) {
         return (
@@ -209,5 +210,3 @@ export default function ManageProjectPage() {
         </div>
     );
 }
-
-    

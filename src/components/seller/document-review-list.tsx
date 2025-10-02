@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Download, XCircle } from "lucide-react";
-import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Timestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText } from "lucide-react";
+import { useFirestore } from "@/firebase";
 
 export interface Document {
   id: string;
@@ -30,9 +30,11 @@ interface DocumentReviewListProps {
 
 export default function DocumentReviewList({ documents, loading }: DocumentReviewListProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handleUpdateStatus = async (id: string, status: 'Approved' | 'Rejected') => {
-    const docRef = doc(db, "documents", id);
+    if (!firestore) return;
+    const docRef = doc(firestore, "documents", id);
     try {
       await updateDoc(docRef, { status: status });
       toast({
