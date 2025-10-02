@@ -206,7 +206,6 @@ export function AppSidebar({ onChatToggle }: { onChatToggle: () => void }) {
                   onClick={onChatToggle}
                   tooltip={"AI Assistant"}
                   className="justify-start"
-                  variant="outline"
                 >
                   <MessageSquare className="h-5 w-5 flex-shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">AI Assistant</span>
