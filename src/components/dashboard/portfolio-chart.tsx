@@ -4,9 +4,8 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from '@/firebase';
 import { collection, query, where, onSnapshot, orderBy, getDocs } from "firebase/firestore";
-import { type User } from "firebase/auth";
 import { type Transaction, type SolarProject } from "@/lib/mock-data";
 import { format, startOfMonth } from "date-fns";
 import { Skeleton } from "../ui/skeleton";
@@ -25,15 +24,11 @@ interface PortfolioChartProps {
 export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(setUser);
-    return () => unsubscribeAuth();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
       setLoading(false);
       return;
     };
@@ -44,7 +39,7 @@ export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) 
         // --- SELLER LOGIC ---
         const fetchSellerData = async () => {
             // 1. Get seller's projects
-            const projectsQuery = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+            const projectsQuery = query(collection(firestore, "projects"), where("ownerId", "==", user.uid));
             const projectsSnapshot = await getDocs(projectsQuery);
             const projectIds = projectsSnapshot.docs.map(doc => doc.id);
 
@@ -55,7 +50,7 @@ export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) 
             }
 
             // 2. Query transactions for those projects
-            const transactionsQuery = query(collection(db, "transactions"), where("projectId", "in", projectIds));
+            const transactionsQuery = query(collection(firestore, "transactions"), where("projectId", "in", projectIds));
             const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
                 const monthlyRevenue: { [key: string]: number } = {};
                 snapshot.forEach(doc => {
@@ -85,7 +80,7 @@ export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) 
     } else {
         // --- BUYER LOGIC (original logic) ---
         const q = query(
-            collection(db, "transactions"), 
+            collection(firestore, "transactions"), 
             where("userId", "==", user.uid),
             orderBy("timestamp", "asc")
         );
@@ -130,7 +125,7 @@ export default function PortfolioChart({ role = 'buyer' }: PortfolioChartProps) 
         return () => unsubscribe();
     }
 
-  }, [user, role]);
+  }, [user, firestore, role]);
 
   if (loading) {
     return <Skeleton className="h-[300px] w-full" />
