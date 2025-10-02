@@ -40,6 +40,7 @@ import {
   AreaChart,
   Briefcase,
   Vote,
+  MessageSquare,
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +75,7 @@ const adminNavItems = [
 ];
 
 
-export function AppSidebar() {
+export function AppSidebar({ onChatToggle }: { onChatToggle: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -200,6 +201,17 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuItem>
           ))}
+            <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onChatToggle}
+                  tooltip={"AI Assistant"}
+                  className="justify-start"
+                  variant="outline"
+                >
+                  <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">AI Assistant</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
 
