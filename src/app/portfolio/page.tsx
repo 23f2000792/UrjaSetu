@@ -8,25 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { auth, db } from '@/lib/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import type { PortfolioAsset, Transaction, SolarProject, EnergyCredit } from '@/lib/mock-data';
-import type { User } from 'firebase/auth';
 
 export default function PortfolioPage() {
     const [portfolioAssets, setPortfolioAssets] = useState<PortfolioAsset[]>([]);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
+    const { user, loading: userLoading } = useUser();
+    const firestore = useFirestore();
 
     useEffect(() => {
-        const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-            setUser(user);
-        });
-        return () => unsubscribeAuth();
-    }, []);
-
-    useEffect(() => {
-        if (!user) {
+        if (!user || !firestore) {
             setLoading(false);
             setPortfolioAssets([]);
             return;
@@ -34,9 +27,9 @@ export default function PortfolioPage() {
 
         setLoading(true);
 
-        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
-        const projectsQuery = collection(db, "projects");
-        const creditsQuery = collection(db, "energyCredits");
+        const transactionsQuery = query(collection(firestore, "transactions"), where("userId", "==", user.uid));
+        const projectsQuery = collection(firestore, "projects");
+        const creditsQuery = collection(firestore, "energyCredits");
 
         const unsubTransactions = onSnapshot(transactionsQuery, (transactionsSnapshot) => {
             const unsubProjects = onSnapshot(projectsQuery, (projectsSnapshot) => {
@@ -96,7 +89,7 @@ export default function PortfolioPage() {
             unsubTransactions();
             // Nested unsubscribes are complex; unsubscribing the outer one is key.
         };
-    }, [user]);
+    }, [user, firestore]);
 
     const totalValue = portfolioAssets.reduce((acc, asset) => acc + (asset.currentValue * asset.quantity), 0);
 
@@ -131,6 +124,8 @@ export default function PortfolioPage() {
         return assetId;
     }
 
+    const isLoadingPage = loading || userLoading;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -148,7 +143,7 @@ export default function PortfolioPage() {
           <CardDescription>The current market value of all your assets.</CardDescription>
         </CardHeader>
         <CardContent>
-            {loading ? (
+            {isLoadingPage ? (
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             ) : (
                 <p className="text-4xl font-bold text-primary">Rs. {totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -174,7 +169,7 @@ export default function PortfolioPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {isLoadingPage ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24">Loading your assets...</TableCell></TableRow>
               ) : portfolioAssets.length > 0 ? (
                 portfolioAssets.map((asset) => (
@@ -207,5 +202,3 @@ export default function PortfolioPage() {
     </div>
   );
 }
-
-    
