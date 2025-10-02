@@ -11,8 +11,7 @@ import { ArrowLeft, Lock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { auth, db } from '@/lib/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, onAuthStateChanged, User } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import {
   AlertDialog,
@@ -24,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { SolarProject, EnergyCredit, Transaction } from '@/lib/mock-data';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 
 export default function SellPage() {
     const params = useParams();
@@ -38,24 +38,23 @@ export default function SellPage() {
     const [marketAsset, setMarketAsset] = useState<SolarProject | EnergyCredit | null>(null);
     const [portfolioInfo, setPortfolioInfo] = useState<{quantity: number, purchasePrice: number} | null>(null);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, []);
+    
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const auth = useAuth();
 
     const isCredit = id.startsWith('credit-');
     const assetId = isCredit ? id.replace('credit-', '') : id;
 
      useEffect(() => {
-        if (!assetId || !user) return;
+        if (!assetId || !user || !firestore) {
+            setLoading(false);
+            return;
+        }
 
         const fetchMarketAsset = async () => {
             const marketCollectionName = isCredit ? 'energyCredits' : 'projects';
-            const marketDocRef = doc(db, marketCollectionName, assetId);
+            const marketDocRef = doc(firestore, marketCollectionName, assetId);
             const marketDocSnap = await getDoc(marketDocRef);
             if (marketDocSnap.exists()) {
                 setMarketAsset({ id: marketDocSnap.id, ...marketDocSnap.data() } as SolarProject | EnergyCredit);
@@ -63,7 +62,7 @@ export default function SellPage() {
         };
         
         const subscribeToTransactions = () => {
-            const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId), where("type", "==", "Buy"));
+            const transactionsQuery = query(collection(firestore, "transactions"), where("userId", "==", user.uid), where("projectId", "==", assetId), where("type", "==", "Buy"));
              const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
                 let totalQuantity = 0;
                 let totalCost = 0;
@@ -91,7 +90,7 @@ export default function SellPage() {
         const unsubTransactions = subscribeToTransactions();
 
         return () => unsubTransactions();
-    }, [assetId, isCredit, user]);
+    }, [assetId, isCredit, user, firestore]);
     
     if (loading) {
         return <div>Loading...</div>;
@@ -108,7 +107,7 @@ export default function SellPage() {
     const totalValue = quantity * price;
 
     const handleSell = async () => {
-        if (!user || !user.email) {
+        if (!user || !user.email || !auth) {
             toast({ title: "Error", description: "You must be logged in to sell assets.", variant: "destructive" });
             return;
         }
