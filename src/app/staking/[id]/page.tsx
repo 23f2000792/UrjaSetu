@@ -4,13 +4,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Check, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc, increment, runTransaction } from 'firebase/firestore';
 import type { GovernanceProposal } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,11 +25,15 @@ export default function ProposalDetailPage() {
     const [loading, setLoading] = useState(true);
     const [isVoting, setIsVoting] = useState(false);
     const [voted, setVoted] = useState<null | 'for' | 'against'>(null); // To-do: Persist this per user
+    const firestore = useFirestore();
 
     useEffect(() => {
-      if (!id) return;
+      if (!id || !firestore) {
+          setLoading(false);
+          return;
+      }
       setLoading(true);
-      const unsub = getDoc(doc(db, "proposals", id)).then(docSnap => {
+      const unsub = getDoc(doc(firestore, "proposals", id)).then(docSnap => {
           if (docSnap.exists()) {
               setProposal({ id: docSnap.id, ...docSnap.data()} as GovernanceProposal);
           } else {
@@ -37,7 +41,7 @@ export default function ProposalDetailPage() {
           }
           setLoading(false);
       });
-    }, [id]);
+    }, [id, firestore]);
 
 
     if (loading) {
@@ -82,6 +86,10 @@ export default function ProposalDetailPage() {
     const againstPercentage = totalVotes > 0 ? (proposal.votesAgainst / totalVotes) * 100 : 0;
     
     const handleVote = async (vote: 'for' | 'against') => {
+        if (!firestore) {
+            toast({ title: "Error", description: "Database connection not available.", variant: "destructive" });
+            return;
+        }
         if (proposal.status !== 'Active') {
             toast({ title: "Voting Closed", description: "This proposal is no longer active.", variant: "destructive" });
             return;
@@ -93,7 +101,7 @@ export default function ProposalDetailPage() {
         
         setIsVoting(true);
         try {
-            const proposalRef = doc(db, "proposals", id);
+            const proposalRef = doc(firestore, "proposals", id);
             const fieldToIncrement = vote === 'for' ? 'votesFor' : 'votesAgainst';
             
             await updateDoc(proposalRef, {
