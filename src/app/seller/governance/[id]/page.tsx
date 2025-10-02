@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ThumbsUp, ThumbsDown, Edit } from 'lucide-react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { GovernanceProposal } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,11 +26,12 @@ export default function SellerProposalDetailPage() {
     const [proposal, setProposal] = useState<GovernanceProposal | null>(null);
     const [loading, setLoading] = useState(true);
     const [newStatus, setNewStatus] = useState<string>("");
+    const firestore = useFirestore();
 
     useEffect(() => {
-      if (!id) return;
+      if (!id || !firestore) return;
       setLoading(true);
-      const unsub = getDoc(doc(db, "proposals", id)).then(docSnap => {
+      const unsub = getDoc(doc(firestore, "proposals", id)).then(docSnap => {
           if (docSnap.exists()) {
               const data = { id: docSnap.id, ...docSnap.data()} as GovernanceProposal;
               setProposal(data);
@@ -40,12 +41,12 @@ export default function SellerProposalDetailPage() {
           }
           setLoading(false);
       });
-    }, [id]);
+    }, [id, firestore]);
 
     const handleStatusUpdate = async () => {
-        if (!newStatus || newStatus === proposal?.status) return;
+        if (!newStatus || newStatus === proposal?.status || !firestore) return;
 
-        const proposalRef = doc(db, "proposals", id);
+        const proposalRef = doc(firestore, "proposals", id);
         try {
             await updateDoc(proposalRef, { status: newStatus });
             setProposal(prev => prev ? { ...prev, status: newStatus as any } : null);

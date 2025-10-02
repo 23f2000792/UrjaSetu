@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 
 export default function AddProposalPage() {
   const [title, setTitle] = useState("");
@@ -22,11 +22,12 @@ export default function AddProposalPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const handleAddProposal = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) {
+    if (!user || !firestore) {
         toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
         return;
     }
@@ -37,7 +38,7 @@ export default function AddProposalPage() {
     setIsLoading(true);
 
     try {
-      await addDoc(collection(db, "proposals"), {
+      await addDoc(collection(firestore, "proposals"), {
         proposerId: user.uid,
         proposer: user.email,
         title,

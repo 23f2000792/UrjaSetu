@@ -6,13 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { LogIn, User, ShieldCheck, Mail, Edit } from "lucide-react";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
-import type { User as FirebaseUser } from "firebase/auth";
-import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
+import { useUser, useFirestore } from "@/firebase";
 
 type UserProfile = {
   fullName: string;
@@ -20,31 +18,31 @@ type UserProfile = {
 };
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const docRef = doc(db, "users", user.uid);
+    const fetchProfile = async () => {
+      if (user && firestore) {
+        const docRef = doc(firestore, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setProfile(docSnap.data() as UserProfile);
         }
-      } else {
-        setUser(null);
-        setProfile(null);
       }
       setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    };
+
+    if (!userLoading) {
+      fetchProfile();
+    }
+  }, [user, userLoading, firestore]);
 
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar')?.imageUrl || '';
 
-  if (isLoading) {
+  if (isLoading || userLoading) {
       return <div>Loading profile...</div>;
   }
 

@@ -5,9 +5,8 @@ import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Award, Leaf, TrendingUp, Users, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import type { User } from 'firebase/auth';
 
 const allBadges = [
     { 
@@ -38,24 +37,20 @@ const allBadges = [
 
 
 export function UserBadges() {
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(setUser);
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (!user) {
+        if (!user || !firestore) {
             setLoading(false);
             return;
         }
 
         setLoading(true);
         // Fetch transaction data
-        const transactionsQuery = query(collection(db, "transactions"), where("userId", "==", user.uid));
+        const transactionsQuery = query(collection(firestore, "transactions"), where("userId", "==", user.uid));
         
         const unsubscribe = onSnapshot(transactionsQuery, (transactionSnapshot) => {
             const transactionCount = transactionSnapshot.size;
@@ -90,7 +85,7 @@ export function UserBadges() {
 
         return () => unsubscribe();
 
-    }, [user]);
+    }, [user, firestore]);
 
 
   return (
