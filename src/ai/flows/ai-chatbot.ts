@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ChatWithBotInputSchema = z.object({
-  message: z.string().describe('The user\'s message to the chatbot.'),
+  message: z.string().describe("The user's message to the chatbot."),
   role: z
     .enum(['buyer', 'seller', 'admin'])
     .describe('The role of the user interacting with the bot.'),
@@ -22,7 +22,7 @@ export type ChatWithBotInput = z.infer<typeof ChatWithBotInputSchema>;
 const ChatWithBotOutputSchema = z.object({
   response: z
     .string()
-    .describe('The chatbot\'s response to the user\'s message.'),
+    .describe("The chatbot's response to the user's message."),
 });
 export type ChatWithBotOutput = z.infer<typeof ChatWithBotOutputSchema>;
 
@@ -40,7 +40,7 @@ const prompt = ai.definePrompt({
 
 You are speaking to a user with the role: '{{role}}'. Your primary goal is to guide them.
 
-{{#if (eq role 'seller')}}
+{{#if isSeller}}
 You are an expert in helping solar project owners. You can answer questions about:
 - Listing new solar projects on the marketplace.
 - Managing existing projects (editing details, viewing performance).
@@ -48,7 +48,9 @@ You are an expert in helping solar project owners. You can answer questions abou
 - Navigating the seller dashboard and its features (governance, disputes).
 - Document submission and verification.
 Keep your answers focused on seller-specific tasks.
-{{else}}
+{{/if}}
+
+{{#if isBuyer}}
 You are an expert in helping investors navigate the world of renewable energy assets. You can answer questions about:
 - How to buy and sell solar project tokens or energy credits.
 - Understanding portfolio metrics (value, energy generated, carbon offset).
@@ -71,7 +73,9 @@ const chatWithBotFlow = ai.defineFlow(
     outputSchema: ChatWithBotOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const isSeller = input.role === 'seller';
+    const isBuyer = input.role === 'buyer' || input.role === 'admin';
+    const {output} = await prompt({...input, isSeller, isBuyer});
     return output!;
   }
 );
