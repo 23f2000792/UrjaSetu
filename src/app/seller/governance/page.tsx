@@ -7,33 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { GovernanceProposal } from "@/lib/mock-data";
-import type { User } from 'firebase/auth';
 
 export default function GovernanceListPage() {
   const [proposals, setProposals] = useState<GovernanceProposal[]>([]);
   const [loadingProposals, setLoadingProposals] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
       setLoadingProposals(false);
       return;
     };
     
     setLoadingProposals(true);
     const q = query(
-        collection(db, "proposals"), 
+        collection(firestore, "proposals"), 
         where("proposerId", "==", user.uid),
         orderBy("createdAt", "desc")
     );
@@ -50,7 +43,7 @@ export default function GovernanceListPage() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, firestore]);
 
   return (
     <div className="space-y-8">
