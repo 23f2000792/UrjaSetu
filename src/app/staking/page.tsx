@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { db } from '@/lib/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import type { GovernanceProposal } from '@/lib/mock-data';
 
@@ -16,10 +16,15 @@ import type { GovernanceProposal } from '@/lib/mock-data';
 export default function StakingPage() {
   const [proposals, setProposals] = useState<GovernanceProposal[]>([]);
   const [loadingProposals, setLoadingProposals] = useState(true);
+  const firestore = useFirestore();
 
   useEffect(() => {
+    if (!firestore) {
+      setLoadingProposals(false);
+      return;
+    }
     setLoadingProposals(true);
-    const q = query(collection(db, "proposals"), orderBy("createdAt", "desc"));
+    const q = query(collection(firestore, "proposals"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
         const proposalsData: GovernanceProposal[] = [];
         snapshot.forEach((doc) => {
@@ -30,7 +35,7 @@ export default function StakingPage() {
     });
 
     return () => unsub();
-  }, []);
+  }, [firestore]);
 
   return (
     <div className="space-y-8">
