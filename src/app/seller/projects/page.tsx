@@ -6,10 +6,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Briefcase, Zap, AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { auth, db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from 'firebase/auth';
+import { useUser, useFirestore } from "@/firebase";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,24 +23,18 @@ interface Project {
 
 export default function SellerProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
+    if (!user || !firestore) {
       setLoading(false);
       return;
     }
 
-    const q = query(collection(db, "projects"), where("ownerId", "==", user.uid));
+    const q = query(collection(firestore, "projects"), where("ownerId", "==", user.uid));
     const unsubscribe = onSnapshot(q,
       (querySnapshot) => {
         const projectsData: Project[] = [];
@@ -63,7 +56,7 @@ export default function SellerProjectsPage() {
     );
 
     return () => unsubscribe();
-  }, [user, toast]);
+  }, [user, firestore, toast]);
 
   const getStatusBadge = (status: Project['status']) => {
     switch (status) {
@@ -72,6 +65,8 @@ export default function SellerProjectsPage() {
         case 'Rejected': return 'destructive';
     }
   }
+
+  const isLoadingOverall = loading || userLoading;
 
   return (
     <div className="space-y-8">
@@ -90,7 +85,7 @@ export default function SellerProjectsPage() {
         </Button>
       </div>
 
-      {loading ? (
+      {isLoadingOverall ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-64" />)}
         </div>
